@@ -13,6 +13,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from panel_ddev import ddev, i18n  # noqa: E402
+from panel_ddev.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
     "name": "demo-app", "path": "/tmp/demo app's folder", "repo": "https://example.com/a b.git",
@@ -55,6 +56,14 @@ def main():
         expected = i18n._("Something went wrong. Check the messages above.")
         if bad.returncode == 0 or expected not in bad.stdout or "never" in bad.stdout:
             failures.append(f"[{lang}] failing script not reported correctly: {bad.stdout}{bad.stderr}")
+
+    # the wrapper used by the terminal must keep the script's exit code and clean up
+    for script, expected_code in (("exit 0", 0), ("exit 3", 3)):
+        with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
+            f.write(script)
+        r = subprocess.run(["bash", "-c", wrapper_command(f.name)])
+        if r.returncode != expected_code or pathlib.Path(f.name).exists():
+            failures.append(f"wrapper: '{script}' exited {r.returncode} (expected {expected_code}) or left the file")
 
     for f in failures:
         print(f)

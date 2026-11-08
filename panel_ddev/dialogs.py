@@ -7,7 +7,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-from . import ddev, github, settings  # noqa: E402
+from . import ddev, github, notify, settings  # noqa: E402
 from .i18n import _  # noqa: E402
 
 
@@ -311,7 +311,10 @@ class PreferencesDialog(Gtk.Dialog):
 
         self.language = combo(settings.LANGUAGES, values.get("language", "auto"))
         self.theme = combo(settings.THEMES, values.get("theme", "system"))
-        for row, (label, widget) in enumerate(((_("Language"), self.language), (_("Appearance"), self.theme))):
+        self.notifications = combo(notify.MODES, values.get("notifications", "background"))
+        self.notifications.set_sensitive(notify.available())
+        rows = ((_("Language"), self.language), (_("Appearance"), self.theme), (_("Notifications"), self.notifications))
+        for row, (label, widget) in enumerate(rows):
             lbl = Gtk.Label(label=label, xalign=1)
             lbl.get_style_context().add_class("dim-label")
             grid.attach(lbl, 0, row, 1, 1)
@@ -320,7 +323,11 @@ class PreferencesDialog(Gtk.Dialog):
         self.show_all()
 
     def values(self):
-        return {"language": self.language.get_active_id(), "theme": self.theme.get_active_id()}
+        return {
+            "language": self.language.get_active_id(),
+            "theme": self.theme.get_active_id(),
+            "notifications": self.notifications.get_active_id(),
+        }
 
 
 class CommandDialog(Gtk.Dialog):

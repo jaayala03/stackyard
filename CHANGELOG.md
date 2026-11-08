@@ -4,6 +4,17 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.11.0] - 2026-11-07
+
+### Added
+- **Desktop notifications** when an action finishes (success or failure);
+  clicking one opens the app. Preferences → Notifications: when the window is
+  not in focus (default), always or never.
+
+### Fixed
+- Failed actions were reported as successful (✔ on the tab) because the exit
+  code of the cleanup step replaced the script's. Covered by a new test.
+
 ## [0.10.0] - 2026-11-07
 
 ### Added

@@ -6,7 +6,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from panel_ddev import ddev, git, settings  # noqa: E402
+from panel_ddev import ddev, git, notify, settings  # noqa: E402
 from panel_ddev.app import STATUS_LABELS  # noqa: E402
 from panel_ddev.dialogs import ProjectDialog  # noqa: E402
 from panel_ddev.locale_es import ES  # noqa: E402
@@ -20,7 +20,7 @@ for f in (ROOT / "panel_ddev").glob("*.py"):
 # strings translated indirectly through constants
 found |= {"Generic (no PHP)", ddev.AUTO_TYPE[1]}  # the other type labels are brand names
 found |= set(STATUS_LABELS.values()) | {d for _l, d, _c in git.STATUS_INFO.values()}
-found |= {label for _v, label in settings.THEMES} | {"System default"}
+found |= {label for _v, label in settings.THEMES} | {"System default"} | {label for _v, label in notify.MODES}
 found |= set(ProjectDialog.TITLES.values()) | set(ProjectDialog.OK.values())
 
 missing = sorted(s for s in found if s not in ES)

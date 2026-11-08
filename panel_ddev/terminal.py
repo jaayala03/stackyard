@@ -30,11 +30,18 @@ TERMINAL_COLORS = {
 }
 
 
+def wrapper_command(path):
+    """Runs a temporary script and deletes it, keeping the script's exit code
+    (not rm's) so failures are reported as failures."""
+    return f"bash {path}; rc=$?; rm -f {path}; exit $rc"
+
+
 class TerminalTabs(Gtk.Notebook):
     def __init__(self):
         super().__init__()
         self.set_scrollable(True)
         self.dark = True
+        self.on_finished = None  # callback(title, exit_code) for scripts started with run()
         self._terms = []
         self._placeholder = Gtk.Label(label=_("The output of each action shows up here."))
         self._placeholder.get_style_context().add_class("dim-label")
@@ -55,7 +62,13 @@ class TerminalTabs(Gtk.Notebook):
         fd, path = tempfile.mkstemp(suffix=".sh", dir=_SCRIPT_DIR)
         with os.fdopen(fd, "w") as f:
             f.write(script)
-        self._spawn(title, ddev.shell_argv(f"bash {path}; rm -f {path}"), cwd, on_done)
+        def done(code):
+            if on_done:
+                on_done(code)
+            if self.on_finished:
+                self.on_finished(title, code)
+
+        self._spawn(title, ddev.shell_argv(wrapper_command(path)), cwd, done)
 
     def interactive(self, title, command, cwd=None, on_done=None):
         """Opens an interactive session (ddev ssh, logs -f…). Returns the Vte.Terminal."""

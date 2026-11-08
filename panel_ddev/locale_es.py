@@ -315,4 +315,10 @@ ES = {
     'Share {name} on the internet?': '¿Compartir {name} en internet?',
     'A temporary public link is created. Anyone who has it can see your site until you close the share tab.': 'Se crea un enlace público temporal. Cualquiera que lo tenga podrá ver tu sitio hasta que cierres la pestaña de compartir.',
     'Share': 'Compartir',
+    'When the window is not in focus': 'Cuando la ventana no está activa',
+    'Always': 'Siempre',
+    'Never': 'Nunca',
+    'Finished successfully.': 'Terminó correctamente.',
+    'Something went wrong. Open Panel DDEV to see the output.': 'Algo falló. Abre Panel DDEV para ver la salida.',
+    'Notifications': 'Avisos',
 }

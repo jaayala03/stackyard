@@ -88,7 +88,8 @@ sudo apt remove panel-ddev
   database import/export and **snapshots** (save and restore copies of the database).
 - **Git**: changes with checkboxes to stage them, coloured diffs, history,
   commit (Ctrl+Enter), branches, fetch, pull and push.
-- **Preferences**: English or Spanish, light, dark or system theme.
+- **Notifications** when long actions finish, even with the window hidden.
+- **Preferences**: English or Spanish, light, dark or system theme, notifications.
 
 Every action runs in an **embedded terminal**: you see exactly which commands
 run, and if something asks for a password you type it right there.
@@ -108,6 +109,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
 | `panel_ddev/git.py` | Git tab |
 | `panel_ddev/tray.py` | Tray icon |
+| `panel_ddev/notify.py` | Desktop notifications |
 | `panel_ddev/share.py` | Share a project (ddev share) |
 | `panel_ddev/envedit.py` | .env editor |
 | `panel_ddev/snapshots.py` | Database snapshots dialog |

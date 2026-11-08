@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, share, snapshots  # noqa: E402
+from . import commands, envedit, notify, share, snapshots  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -120,6 +120,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # ---------------- terminal
         self.terms = TerminalTabs()
+        self.terms.on_finished = self._on_action_finished
         self.terms.set_dark(settings.is_dark_now())
         bottom = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         bottom.pack1(top, True, False)
@@ -381,6 +382,15 @@ class MainWindow(Gtk.ApplicationWindow):
         stack.set_visible_child_name(self.current_page)
         switcher.set_stack(stack)  # after choosing the page so the right button is active
         stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
+
+    def _on_action_finished(self, title, code):
+        mode = self.get_application().prefs.get("notifications", "background")
+        if notify.should_notify(mode, self):
+            notify.finished(title, code == 0, ICON if Path(ICON).exists() else "panel-ddev", self._show_output)
+
+    def _show_output(self):
+        self.show()
+        self.present()
 
     def _load_xdebug(self, p, switch):
         def work():

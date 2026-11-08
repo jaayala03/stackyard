@@ -87,7 +87,8 @@ sudo apt remove panel-ddev
   copias completas de la base de datos).
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,
   historial, commit (Ctrl+Enter), ramas, fetch, pull y push.
-- **Preferencias**: español o inglés, tema claro, oscuro o el del sistema.
+- **Avisos de escritorio** cuando terminan las acciones largas, aunque la ventana esté oculta.
+- **Preferencias**: español o inglés, tema claro, oscuro o el del sistema, avisos.
 
 Cada acción se ejecuta en una **terminal integrada**: ves exactamente qué
 comandos se lanzan, y si algo pide contraseña la escribes ahí mismo.
