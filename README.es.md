@@ -77,6 +77,8 @@ sudo apt remove panel-ddev
 - **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
   carpeta pública automáticamente.
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
+- **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los
+  scripts de tu `package.json` y tus propios comandos guardados por proyecto.
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,
   Mailpit, importar/exportar la base de datos.
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,

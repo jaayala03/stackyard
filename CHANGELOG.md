@@ -4,6 +4,23 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.6.0] - 2026-11-07
+
+### Added
+- **Quick commands** on the project page:
+  - Framework shortcuts: Laravel (migrate, migrate:fresh --seed with
+    confirmation, optimize:clear, test, tinker, queue:work), WordPress (wp-cli
+    updates, cache flush, users), Symfony, Drupal (drush), Craft CMS,
+    CodeIgniter, CakePHP and Magento.
+  - The scripts of the project's `package.json` (`npm run dev`, `build`…);
+    watchers like `dev` open as interactive terminals.
+  - `composer update` when the project has a `composer.json`.
+  - **Your own commands**, saved per project ("Add command…"); right-click one
+    to remove it.
+
+### Fixed
+- Changing preferences no longer overwrites other saved settings.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

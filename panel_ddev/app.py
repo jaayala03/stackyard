@@ -12,7 +12,8 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from .dialogs import PreferencesDialog, ProjectDialog  # noqa: E402
+from . import commands  # noqa: E402
+from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
 from .terminal import TerminalTabs  # noqa: E402
@@ -362,10 +363,72 @@ class MainWindow(Gtk.ApplicationWindow):
         tools_frame.add(tools)
         columns.pack_start(tools_frame, True, True, 0)
 
+        # quick commands
+        body.pack_start(self._commands_frame(p, running), False, False, 0)
+
         self.detail.show_all()
         stack.set_visible_child_name(self.current_page)
         switcher.set_stack(stack)  # after choosing the page so the right button is active
         stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
+
+    def _commands_frame(self, p, running):
+        frame = Gtk.Frame(label=" " + _("Quick commands") + " ")
+        flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=4, min_children_per_line=2,
+                           margin=10, column_spacing=6, row_spacing=6, homogeneous=True)
+        approot = p["approot"]
+        groups = [
+            (commands.builtin_commands(p.get("cfg_type") or p.get("type") or ""), False),
+            (commands.package_scripts(approot), False),
+            (commands.composer_commands(approot), False),
+            (commands.saved_commands(p["name"]), True),
+        ]
+        for items, saved in groups:
+            for label, cmd, kind in items:
+                icon = "starred-symbolic" if saved else (
+                    "utilities-terminal-symbolic" if kind == "interactive" else
+                    "dialog-warning-symbolic" if kind == "danger" else "system-run-symbolic")
+                tip = cmd + ("\n" + _("Right-click to remove") if saved else "")
+                b = icon_button(icon, label, tip, lambda c=cmd, k=kind, l=label: self.run_command(p, l, c, k))
+                b.set_sensitive(running)
+                if saved:
+                    b.connect("button-press-event", self._on_saved_command_click, p["name"], label)
+                flow.add(b)
+        add = icon_button("list-add-symbolic", _("Add command…"), _("Save your own command for this project"), lambda: self.on_add_command(p))
+        flow.add(add)
+        frame.add(flow)
+        return frame
+
+    def run_command(self, p, label, cmd, kind):
+        title = f"{p['name']}: {label}"
+        if kind == "danger" and not self.confirm(
+            _("Run “{label}”?").format(label=label),
+            _("This command can delete data in the database of {name}.").format(name=p["name"]),
+            _("Run"), destructive=True,
+        ):
+            return
+        if kind == "interactive":
+            self.terms.interactive(title, cmd, cwd=p["approot"])
+        else:
+            self.terms.run(title, ddev.script_simple(p["approot"], [(label, cmd)], _("Done")), cwd=p["approot"])
+
+    def on_add_command(self, p):
+        dlg = CommandDialog(self)
+        values = dlg.values() if dlg.run() == Gtk.ResponseType.OK else None
+        dlg.destroy()
+        if values:
+            commands.add_command(p["name"], *values)
+            self.render_detail()
+
+    def _on_saved_command_click(self, _btn, event, project_name, label):
+        if event.button != 3:
+            return False
+        menu = Gtk.Menu()
+        item = Gtk.MenuItem(label=_("Remove “{label}”").format(label=label))
+        item.connect("activate", lambda *_a: (commands.remove_command(project_name, label), self.render_detail()))
+        menu.append(item)
+        menu.show_all()
+        menu.popup_at_pointer(event)
+        return True
 
     def _on_page_changed(self, stack, _pspec, gitview):
         if self._rebuilding:
@@ -627,7 +690,8 @@ class PanelApp(Gtk.Application):
 
     def apply_preferences(self, values):
         old = dict(self.prefs)
-        self.prefs.update(values)
+        # reload first: other parts of the app (saved commands) write to the same file
+        self.prefs = {**settings.load(), **values}
         settings.save(self.prefs)
         dark = settings.apply_theme(self.prefs["theme"])
         for w in self.get_windows():

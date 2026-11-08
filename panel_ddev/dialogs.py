@@ -321,3 +321,37 @@ class PreferencesDialog(Gtk.Dialog):
 
     def values(self):
         return {"language": self.language.get_active_id(), "theme": self.theme.get_active_id()}
+
+
+class CommandDialog(Gtk.Dialog):
+    """Asks for a label and a command line to save as a quick command."""
+
+    def __init__(self, parent):
+        super().__init__(title=_("Add command"), transient_for=parent, modal=True)
+        self.set_default_size(460, -1)
+        self.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        self.ok = self.add_button(_("Save"), Gtk.ResponseType.OK)
+        self.ok.get_style_context().add_class("suggested-action")
+        self.ok.set_sensitive(False)
+        self.set_default_response(Gtk.ResponseType.OK)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10, margin=18)
+        self.get_content_area().add(grid)
+        self.label = Gtk.Entry(placeholder_text=_("e.g. Seed users"), activates_default=True)
+        self.command = Gtk.Entry(placeholder_text="ddev artisan db:seed --class=UserSeeder", activates_default=True)
+        self.interactive = Gtk.CheckButton(label=_("Keeps running or needs input (e.g. a watcher)"))
+        hint = Gtk.Label(label=_("It runs in the project folder. Use ddev in front to run it inside the container."), xalign=0, wrap=True, max_width_chars=48)
+        hint.get_style_context().add_class("dim-label")
+        for row, (text, widget) in enumerate(((_("Name"), self.label), (_("Command"), self.command))):
+            lbl = Gtk.Label(label=text, xalign=1)
+            lbl.get_style_context().add_class("dim-label")
+            grid.attach(lbl, 0, row, 1, 1)
+            widget.set_hexpand(True)
+            grid.attach(widget, 1, row, 1, 1)
+        grid.attach(hint, 1, 2, 1, 1)
+        grid.attach(self.interactive, 1, 3, 1, 1)
+        for e in (self.label, self.command):
+            e.connect("changed", lambda *_a: self.ok.set_sensitive(bool(self.label.get_text().strip() and self.command.get_text().strip())))
+        self.show_all()
+
+    def values(self):
+        return self.label.get_text().strip(), self.command.get_text().strip(), self.interactive.get_active()
