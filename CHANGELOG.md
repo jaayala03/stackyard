@@ -4,6 +4,15 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.13.0] - 2026-11-07
+
+### Added
+- **Resource usage**: memory per project in the list, CPU and RAM in the
+  project configuration, and the total used by DDEV in the header.
+- **Stop idle projects** (Preferences): stop a running project automatically
+  after 30 minutes, 1 hour or 2 hours without web traffic or CPU use, while the
+  app is open. A notification tells you when it happens. Off by default.
+
 ## [0.12.0] - 2026-11-07
 
 ### Added

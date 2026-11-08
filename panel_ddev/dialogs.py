@@ -7,7 +7,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-from . import ddev, github, notify, settings  # noqa: E402
+from . import ddev, github, notify, resources, settings  # noqa: E402
 from .i18n import _  # noqa: E402
 
 
@@ -313,7 +313,14 @@ class PreferencesDialog(Gtk.Dialog):
         self.theme = combo(settings.THEMES, values.get("theme", "system"))
         self.notifications = combo(notify.MODES, values.get("notifications", "background"))
         self.notifications.set_sensitive(notify.available())
-        rows = ((_("Language"), self.language), (_("Appearance"), self.theme), (_("Notifications"), self.notifications))
+        self.auto_stop = combo(resources.IDLE_OPTIONS, str(values.get("auto_stop", "0")))
+        self.auto_stop.set_tooltip_text(_("Stops a running project when its site has had no traffic or CPU use for this long. Only while Panel DDEV is open."))
+        rows = (
+            (_("Language"), self.language),
+            (_("Appearance"), self.theme),
+            (_("Notifications"), self.notifications),
+            (_("Stop idle projects"), self.auto_stop),
+        )
         for row, (label, widget) in enumerate(rows):
             lbl = Gtk.Label(label=label, xalign=1)
             lbl.get_style_context().add_class("dim-label")
@@ -327,6 +334,7 @@ class PreferencesDialog(Gtk.Dialog):
             "language": self.language.get_active_id(),
             "theme": self.theme.get_active_id(),
             "notifications": self.notifications.get_active_id(),
+            "auto_stop": self.auto_stop.get_active_id(),
         }
 
 

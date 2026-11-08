@@ -88,6 +88,8 @@ sudo apt remove panel-ddev
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,
   historial, commit (Ctrl+Enter), ramas, fetch, pull (fast-forward, merge o
   rebase) y push, descartar cambios, stash y resolución de conflictos.
+- **Uso de recursos** (CPU y RAM por proyecto) y **apagado automático** opcional
+  de los proyectos sin uso para ahorrar memoria.
 - **Avisos de escritorio** cuando terminan las acciones largas, aunque la ventana esté oculta.
 - **Preferencias**: español o inglés, tema claro, oscuro o el del sistema, avisos.
 

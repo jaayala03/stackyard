@@ -12,7 +12,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 CONFIG_DIR = Path(GLib.get_user_config_dir()) / "panel-ddev"
 CONFIG_FILE = CONFIG_DIR / "settings.json"
-DEFAULTS = {"language": "auto", "theme": "system", "notifications": "background"}
+DEFAULTS = {"language": "auto", "theme": "system", "notifications": "background", "auto_stop": "0"}
 
 LANGUAGES = [("auto", "System default"), ("en", "English"), ("es", "Español")]
 THEMES = [("system", "System default"), ("light", "Light"), ("dark", "Dark")]

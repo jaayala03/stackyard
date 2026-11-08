@@ -89,6 +89,8 @@ sudo apt remove panel-ddev
 - **Git**: changes with checkboxes to stage them, coloured diffs, history,
   commit (Ctrl+Enter), branches, fetch, pull (fast-forward, merge or rebase) and
   push, discard changes, stash, and conflict resolution (ours / theirs).
+- **Resource usage** (CPU and RAM per project) and optional **auto-stop of idle
+  projects** to save memory.
 - **Notifications** when long actions finish, even with the window hidden.
 - **Preferences**: English or Spanish, light, dark or system theme, notifications.
 
@@ -110,6 +112,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
 | `panel_ddev/git.py` | Git tab |
 | `panel_ddev/tray.py` | Tray icon |
+| `panel_ddev/resources.py` | Resource usage and idle detection |
 | `panel_ddev/notify.py` | Desktop notifications |
 | `panel_ddev/share.py` | Share a project (ddev share) |
 | `panel_ddev/envedit.py` | .env editor |

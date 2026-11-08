@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from panel_ddev import ddev, i18n  # noqa: E402
+from panel_ddev import ddev, i18n, resources  # noqa: E402
 from panel_ddev.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
@@ -64,6 +64,19 @@ def main():
         r = subprocess.run(["bash", "-c", wrapper_command(f.name)])
         if r.returncode != expected_code or pathlib.Path(f.name).exists():
             failures.append(f"wrapper: '{script}' exited {r.returncode} (expected {expected_code}) or left the file")
+
+    # idle tracker: quiet for 30 min -> idle; traffic or CPU resets the timer
+    t = resources.IdleTracker()
+    st = {"p": {"cpu": 0.1, "mem": 1, "web_cpu": 0.1, "web_rx": 100}}
+    t.update(st, ["p"], now=0)
+    checks = [t.idle_projects(30, now=1799) == [], t.idle_projects(30, now=1800) == ["p"]]
+    st["p"]["web_rx"] = 200
+    t.update(st, ["p"], now=1900)
+    checks.append(t.idle_projects(30, now=1901) == [])
+    t.update(st, [], now=2000)
+    checks.append(t.last_active == {})
+    if not all(checks):
+        failures.append(f"idle tracker: {checks}")
 
     for f in failures:
         print(f)

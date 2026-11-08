@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, notify, share, snapshots  # noqa: E402
+from . import commands, envedit, notify, resources, share, snapshots  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -71,6 +71,10 @@ class ProjectRow(Gtk.ListBoxRow):
         texts.pack_start(name, False, False, 0)
         texts.pack_start(url, False, False, 0)
         box.pack_start(texts, True, True, 0)
+        self.mem_label = Gtk.Label(xalign=1)
+        self.mem_label.get_style_context().add_class("dim-label")
+        self.mem_label.set_tooltip_text(_("Memory used by the project's containers"))
+        box.pack_end(self.mem_label, False, False, 0)
         self.add(box)
 
 
@@ -89,6 +93,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self._rebuilding = False
         self._pending_select = None
         self._tray_sig = None
+        self.stats = {}
+        self.idle = resources.IdleTracker()
+        self._res_label = None
 
         # ---------------- header bar
         header = Gtk.HeaderBar(show_close_button=True, title="Panel DDEV")
@@ -172,13 +179,20 @@ class MainWindow(Gtk.ApplicationWindow):
         def work():
             try:
                 projects = ddev.list_projects()
-                GLib.idle_add(self.set_projects, projects)
+                try:
+                    stats = resources.sample()
+                except Exception:  # noqa: BLE001 - stats are optional
+                    stats = None
+                GLib.idle_add(self.set_projects, projects, stats)
             except Exception as exc:  # noqa: BLE001
                 GLib.idle_add(self.header.set_subtitle, _("Error reading projects: {error}").format(error=exc)[:120])
 
         threading.Thread(target=work, daemon=True).start()
 
-    def set_projects(self, projects):
+    def set_projects(self, projects, stats=None):
+        if stats is not None:
+            self.stats = stats
+            self._check_idle(projects)
         prev = self.selected["name"] if self.selected else None
         if self._pending_select and any(p["name"] == self._pending_select for p in projects):
             prev, self._pending_select = self._pending_select, None
@@ -195,7 +209,11 @@ class MainWindow(Gtk.ApplicationWindow):
             (_("{count} project") if len(projects) == 1 else _("{count} projects")).format(count=len(projects))
             + " · " + _("{count} running").format(count=running)
         )
+        total = sum(v["mem"] for v in self.stats.values())
+        if total:
+            self.header.set_subtitle(self.header.get_subtitle() + " · " + _("{mem} in use").format(mem=resources.human(total)))
         if not changed:
+            self._update_usage()
             return False
         for row in self.listbox.get_children():
             self.listbox.remove(row)
@@ -206,6 +224,7 @@ class MainWindow(Gtk.ApplicationWindow):
             if p["name"] == prev:
                 select = row
         self.listbox.show_all()
+        self._update_usage()
         if select is None and projects and prev is None:
             select = self.listbox.get_row_at_index(0)
         if select:
@@ -214,6 +233,30 @@ class MainWindow(Gtk.ApplicationWindow):
             self.selected = None
             self.render_detail()
         return False
+
+    def _update_usage(self):
+        for row in self.listbox.get_children():
+            st = self.stats.get(row.project["name"])
+            row.mem_label.set_text(resources.human(st["mem"]) if st else "")
+        if self._res_label and self._res_label.get_parent() and self.selected:
+            st = self.stats.get(self.selected["name"])
+            self._res_label.set_text(
+                _("CPU {cpu:.1f}% · RAM {mem}").format(cpu=st["cpu"], mem=resources.human(st["mem"])) if st else "—"
+            )
+
+    def _check_idle(self, projects):
+        running = [p["name"] for p in projects if p.get("status") == "running" and p["name"] not in self.busy]
+        self.idle.update(self.stats, running)
+        minutes = int(self.get_application().prefs.get("auto_stop", "0") or 0)
+        for name in self.idle.idle_projects(minutes):
+            p = next((x for x in projects if x["name"] == name), None)
+            if not p or name in self.busy:
+                continue
+            self.idle.reset(name)
+            self.project_action(p, "stop")
+            if self.get_application().prefs.get("notifications") != "never":
+                notify.finished(_("{name} stopped after {minutes} min without activity").format(name=name, minutes=minutes),
+                                True, ICON if Path(ICON).exists() else "panel-ddev", self._show_output)
 
     def _update_tray(self):
         tray = getattr(self.get_application(), "tray", None)
@@ -326,6 +369,7 @@ class MainWindow(Gtk.ApplicationWindow):
             (_("Public folder"), p.get("cfg_docroot") or _("(root)")),
             ("PHP", p.get("cfg_php") or "—"),
             ("Node", p.get("cfg_node") or p.get("nodejs_version") or "—"),
+            (_("Resources"), "—"),
             (_("Web server"), ddev.label_for(ddev.WEBSERVERS, p.get("cfg_webserver"))),
             (_("Database"), ddev.label_for(ddev.DATABASES, p.get("cfg_db"))),
         ]
@@ -333,7 +377,11 @@ class MainWindow(Gtk.ApplicationWindow):
             kl = Gtk.Label(label=k, xalign=0)
             kl.get_style_context().add_class("dim-label")
             grid.attach(kl, 0, i, 1, 1)
-            grid.attach(Gtk.Label(label=str(v), xalign=0, selectable=True), 1, i, 1, 1)
+            value = Gtk.Label(label=str(v), xalign=0, selectable=True)
+            grid.attach(value, 1, i, 1, 1)
+            if k == _("Resources"):
+                self._res_label = value
+        GLib.idle_add(self._update_usage)
         xl = Gtk.Label(label="Xdebug", xalign=0)
         xl.get_style_context().add_class("dim-label")
         grid.attach(xl, 0, len(rows), 1, 1)
