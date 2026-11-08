@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
-VERSION=$(python3 -c "import panel_ddev; print(panel_ddev.__version__)")
+VERSION=$(python3 -c "import stackyard; print(stackyard.__version__)")
 TAG="v$VERSION"
 
 [ -z "$(git status --porcelain)" ] || { echo "Working tree is not clean." >&2; exit 1; }
@@ -22,7 +22,7 @@ trap 'rm -f "$NOTES"' EXIT
   echo "## Install"
   echo
   echo '```bash'
-  echo "curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/install.sh | bash"
+  echo "curl -fsSL https://raw.githubusercontent.com/jaayala03/stackyard/main/install.sh | bash"
   echo '```'
   echo
   echo "Already have Docker and DDEV? Download the \`.deb\` below and run \`sudo apt install ./$(basename "$DEB")\`."
@@ -34,9 +34,9 @@ trap 'rm -f "$NOTES"' EXIT
     on { print }
   ' CHANGELOG.md | sed 's/^### /## /'
   echo
-  echo "Full changelog: [CHANGELOG.md](https://github.com/jaayala03/panel-ddev/blob/main/CHANGELOG.md) · [Terms](https://github.com/jaayala03/panel-ddev/blob/main/TERMS.md)"
+  echo "Full changelog: [CHANGELOG.md](https://github.com/jaayala03/stackyard/blob/main/CHANGELOG.md) · [Terms](https://github.com/jaayala03/stackyard/blob/main/TERMS.md)"
 } > "$NOTES"
 
-git tag -a "$TAG" -m "Panel DDEV $VERSION"
+git tag -a "$TAG" -m "Stackyard $VERSION"
 git push -q origin "$TAG"
-gh release create "$TAG" "$DEB" --title "Panel DDEV $VERSION" --notes-file "$NOTES" --latest
+gh release create "$TAG" "$DEB" --title "Stackyard $VERSION" --notes-file "$NOTES" --latest

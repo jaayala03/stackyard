@@ -2,7 +2,7 @@
 
 Última actualización: 7 de noviembre de 2026 · [English version](TERMS.md)
 
-Al descargar, instalar o usar **Panel DDEV** («la aplicación») aceptas estos términos.
+Al descargar, instalar o usar **Stackyard** («la aplicación») aceptas estos términos.
 Si no estás de acuerdo, no la uses.
 
 ## 1. Licencia
@@ -45,7 +45,7 @@ aceptar sus respectivas condiciones.
 ## 5. Marcas
 
 «DDEV», «Docker», «GitHub», «Laravel», «WordPress» y otros nombres citados son
-marcas de sus respectivos titulares. **Panel DDEV es un proyecto independiente y
+marcas de sus respectivos titulares. **Stackyard es un proyecto independiente y
 no está afiliado, patrocinado ni respaldado por el proyecto DDEV ni por ninguna
 de esas empresas.**
 

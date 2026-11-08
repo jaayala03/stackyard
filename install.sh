@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Installs Panel DDEV and everything it needs:
+# Installs Stackyard and everything it needs:
 #   Docker (official repository), DDEV, mkcert (local HTTPS) and the app itself.
 # Tested on Linux Mint 22 / Ubuntu 24.04. Works on Ubuntu and Debian derivatives.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/jaayala03/stackyard/main/install.sh | bash
 # or, from a copy of the repository:
 #   ./install.sh            (installs the latest published release)
 #   ./install.sh --local    (builds and installs the package from this source tree)
 set -euo pipefail
 
-REPO="jaayala03/panel-ddev"
+REPO="jaayala03/stackyard"
 
 # Messages follow the system language (Spanish or English).
 case "${LANGUAGE:-${LC_ALL:-${LANG:-en}}}" in es*) ES=1 ;; *) ES=0 ;; esac
@@ -73,7 +73,7 @@ fi
 step "Local HTTPS certificates (mkcert)" "Certificados HTTPS locales (mkcert)"
 mkcert -install
 
-step "Installing Panel DDEV" "Instalando Panel DDEV"
+step "Installing Stackyard" "Instalando Stackyard"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 if [ "${1:-}" = "--local" ]; then
@@ -92,11 +92,11 @@ else
   curl -fsSL "$URL" -o "$DEB"
 fi
 sudo apt-get install -y -qq "$DEB" >/dev/null
-VERSION=$(dpkg-query -W -f='${Version}' panel-ddev)
-ok "Panel DDEV $VERSION installed" "Panel DDEV $VERSION instalado"
+VERSION=$(dpkg-query -W -f='${Version}' stackyard)
+ok "Stackyard $VERSION installed" "Stackyard $VERSION instalado"
 
 echo
-ok "All set. Open “Panel DDEV” from the applications menu." "Todo listo. Abre «Panel DDEV» desde el menú de aplicaciones."
+ok "All set. Open “Stackyard” from the applications menu." "Todo listo. Abre «Stackyard» desde el menú de aplicaciones."
 if [ "$NEEDS_RELOGIN" = 1 ]; then
   printf '\033[1;33m! %s\033[0m\n' "$(t "Log out and back in to use Docker without sudo." "Cierra sesión y vuelve a entrar para usar Docker sin sudo.")"
 fi

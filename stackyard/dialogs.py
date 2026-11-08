@@ -314,7 +314,7 @@ class PreferencesDialog(Gtk.Dialog):
         self.notifications = combo(notify.MODES, values.get("notifications", "background"))
         self.notifications.set_sensitive(notify.available())
         self.auto_stop = combo(resources.IDLE_OPTIONS, str(values.get("auto_stop", "0")))
-        self.auto_stop.set_tooltip_text(_("Stops a running project when its site has had no traffic or CPU use for this long. Only while Panel DDEV is open."))
+        self.auto_stop.set_tooltip_text(_("Stops a running project when its site has had no traffic or CPU use for this long. Only while Stackyard is open."))
         rows = (
             (_("Language"), self.language),
             (_("Appearance"), self.theme),

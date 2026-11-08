@@ -6,13 +6,13 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from panel_ddev import ddev, git, notify, resources, settings  # noqa: E402
-from panel_ddev.app import STATUS_LABELS  # noqa: E402
-from panel_ddev.dialogs import ProjectDialog  # noqa: E402
-from panel_ddev.locale_es import ES  # noqa: E402
+from stackyard import ddev, git, notify, resources, settings  # noqa: E402
+from stackyard.app import STATUS_LABELS  # noqa: E402
+from stackyard.dialogs import ProjectDialog  # noqa: E402
+from stackyard.locale_es import ES  # noqa: E402
 
 found = set()
-for f in (ROOT / "panel_ddev").glob("*.py"):
+for f in (ROOT / "stackyard").glob("*.py"):
     for n in ast.walk(ast.parse(f.read_text())):
         if (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_"
                 and n.args and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):

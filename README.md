@@ -1,13 +1,13 @@
-<p align="center"><img src="icon.svg" width="96" alt="Panel DDEV"></p>
+<p align="center"><img src="icon.svg" width="96" alt="Stackyard"></p>
 
-<h1 align="center">Panel DDEV</h1>
+<h1 align="center">Stackyard</h1>
 
 <p align="center">
 Your local web development environment on Linux, from one window.<br>
 Create, clone and manage PHP, Laravel, WordPress and other projects — powered by <a href="https://ddev.com">DDEV</a>.
 </p>
 
-<p align="center"><a href="README.es.md">Leer en español</a></p>
+<p align="center"><a href="README.es.md">Leer en español</a> · Formerly <i>Panel DDEV</i></p>
 
 ---
 
@@ -22,26 +22,26 @@ built-in git. Free and open source. Available in **English and Spanish**, with
 On **Linux Mint 22 / Ubuntu 24.04** (or other Ubuntu/Debian derivatives), open a terminal and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jaayala03/stackyard/main/install.sh | bash
 ```
 
 The installer sets up **Docker**, **DDEV**, local HTTPS certificates
-(**mkcert**) and **Panel DDEV**. It asks for your `sudo` password.
+(**mkcert**) and **Stackyard**. It asks for your `sudo` password.
 
 When it finishes:
 
 1. **Log out and back in** (to use Docker without `sudo`).
 2. **Restart your browser** (so it trusts the local HTTPS certificates).
-3. Open **Panel DDEV** from the applications menu.
+3. Open **Stackyard** from the applications menu.
 
 <details>
 <summary>Manual install (package only)</summary>
 
 If you already have Docker and DDEV, download the `.deb` from the
-[latest release](https://github.com/jaayala03/panel-ddev/releases/latest) and install it:
+[latest release](https://github.com/jaayala03/stackyard/releases/latest) and install it:
 
 ```bash
-sudo apt install ./panel-ddev_*_all.deb
+sudo apt install ./stackyard_*_all.deb
 ```
 </details>
 
@@ -49,9 +49,9 @@ sudo apt install ./panel-ddev_*_all.deb
 <summary>From source</summary>
 
 ```bash
-git clone https://github.com/jaayala03/panel-ddev.git
-cd panel-ddev
-./panel-ddev                # run without installing
+git clone https://github.com/jaayala03/stackyard.git
+cd stackyard
+./bin/stackyard            # run without installing
 ./install.sh --local        # or build and install the package
 ```
 </details>
@@ -59,7 +59,7 @@ cd panel-ddev
 ### Uninstall
 
 ```bash
-sudo apt remove panel-ddev
+sudo apt remove stackyard
 ```
 
 (Docker, DDEV and your projects are left untouched.)
@@ -108,22 +108,23 @@ run, and if something asks for a password you type it right there.
 
 | File | Purpose |
 |---|---|
-| `panel_ddev/app.py` | Main window and application |
-| `panel_ddev/ddev.py` | Talks to `ddev` and builds the script of each action |
-| `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
-| `panel_ddev/git.py` | Git tab |
-| `panel_ddev/tray.py` | Tray icon |
-| `panel_ddev/resources.py` | Resource usage and idle detection |
-| `panel_ddev/notify.py` | Desktop notifications |
-| `panel_ddev/share.py` | Share a project (ddev share) |
-| `panel_ddev/envedit.py` | .env editor |
-| `panel_ddev/snapshots.py` | Database snapshots dialog |
-| `panel_ddev/vite.py` | Vite dev server setup for DDEV |
-| `panel_ddev/commands.py` | Quick commands per framework, npm scripts and saved commands |
-| `panel_ddev/github.py` | GitHub repository picker (uses `gh`) |
-| `panel_ddev/terminal.py` | Embedded terminal (VTE) |
-| `panel_ddev/i18n.py`, `locale_es.py` | Translations |
-| `panel_ddev/settings.py` | Preferences and theme |
+| `bin/stackyard` | Launcher |
+| `stackyard/app.py` | Main window and application |
+| `stackyard/ddev.py` | Talks to `ddev` and builds the script of each action |
+| `stackyard/dialogs.py` | New / clone / settings and preferences dialogs |
+| `stackyard/git.py` | Git tab |
+| `stackyard/tray.py` | Tray icon |
+| `stackyard/resources.py` | Resource usage and idle detection |
+| `stackyard/notify.py` | Desktop notifications |
+| `stackyard/share.py` | Share a project (ddev share) |
+| `stackyard/envedit.py` | .env editor |
+| `stackyard/snapshots.py` | Database snapshots dialog |
+| `stackyard/vite.py` | Vite dev server setup for DDEV |
+| `stackyard/commands.py` | Quick commands per framework, npm scripts and saved commands |
+| `stackyard/github.py` | GitHub repository picker (uses `gh`) |
+| `stackyard/terminal.py` | Embedded terminal (VTE) |
+| `stackyard/i18n.py`, `locale_es.py` | Translations |
+| `stackyard/settings.py` | Preferences and theme |
 | `packaging/build-deb.sh` | Builds the `.deb` into `dist/` |
 | `packaging/check_translations.py` | Fails if a UI string has no translation |
 | `packaging/test_scripts.py` | Smoke tests for the generated bash scripts |
@@ -132,9 +133,9 @@ run, and if something asks for a password you type it right there.
 
 Built with Python 3 and GTK 3 (PyGObject). Code, comments and commits are in
 English. UI strings are written in English and wrapped in `_()`; add the Spanish
-text to `panel_ddev/locale_es.py`.
+text to `stackyard/locale_es.py`.
 
-To publish a release: bump `__version__` in `panel_ddev/__init__.py`, add the
+To publish a release: bump `__version__` in `stackyard/__init__.py`, add the
 entry to `CHANGELOG.md`, commit and push, then run `packaging/release.sh` (builds
 the `.deb`, tags the version and creates the GitHub release with the changelog
 notes).
@@ -143,6 +144,6 @@ notes).
 
 - Code under the [MIT](LICENSE) license.
 - [Terms of use and privacy](TERMS.md): no warranty; the app collects no data.
-- Panel DDEV is an **independent** project, not affiliated with the
+- Stackyard is an **independent** project, not affiliated with the
   [DDEV](https://github.com/ddev/ddev) project or Docker. Their names are
   trademarks of their owners.

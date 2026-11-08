@@ -14,7 +14,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango, Vte  # noqa: E402
 from . import ddev  # noqa: E402
 from .i18n import _  # noqa: E402
 
-_SCRIPT_DIR = os.path.join(GLib.get_user_runtime_dir() or tempfile.gettempdir(), "panel-ddev")
+_SCRIPT_DIR = os.path.join(GLib.get_user_runtime_dir() or tempfile.gettempdir(), "stackyard")
 
 
 def _rgba(spec):

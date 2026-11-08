@@ -1,8 +1,19 @@
 # Changelog
 
-All published versions of Panel DDEV. The format follows
+All published versions of Stackyard (called Panel DDEV before 1.1.0). The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
+
+## [1.1.0] - 2026-11-07
+
+### Changed
+- **New name: Stackyard** (was Panel DDEV) and a new icon: three stacked layers
+  (web, PHP, database) with a status light. The name no longer uses the DDEV
+  trademark.
+- The repository is now `jaayala03/stackyard`, the package and command are
+  `stackyard`, and the installer downloads from the new repository. Installing
+  the `stackyard` package replaces `panel-ddev` automatically.
+- Settings and the "Open at login" entry of Panel DDEV are migrated on first run.
 
 ## [1.0.0] - 2026-11-07
 

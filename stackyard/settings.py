@@ -10,7 +10,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk  # noqa: E402
 
-CONFIG_DIR = Path(GLib.get_user_config_dir()) / "panel-ddev"
+CONFIG_DIR = Path(GLib.get_user_config_dir()) / "stackyard"
 CONFIG_FILE = CONFIG_DIR / "settings.json"
 DEFAULTS = {"language": "auto", "theme": "system", "notifications": "background", "auto_stop": "0"}
 
@@ -18,7 +18,13 @@ LANGUAGES = [("auto", "System default"), ("en", "English"), ("es", "Español")]
 THEMES = [("system", "System default"), ("light", "Light"), ("dark", "Dark")]
 
 
+OLD_CONFIG_FILE = Path(GLib.get_user_config_dir()) / "panel-ddev" / "settings.json"  # name before 1.1.0
+
+
 def load():
+    if not CONFIG_FILE.exists() and OLD_CONFIG_FILE.exists():
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        CONFIG_FILE.write_text(OLD_CONFIG_FILE.read_text())
     try:
         data = json.loads(CONFIG_FILE.read_text())
     except (OSError, ValueError):

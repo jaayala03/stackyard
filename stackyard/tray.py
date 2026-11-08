@@ -15,16 +15,26 @@ try:
 except (ValueError, ImportError):
     AppIndicator = None
 
-AUTOSTART = Path(GLib.get_user_config_dir()) / "autostart" / "panel-ddev.desktop"
+AUTOSTART = Path(GLib.get_user_config_dir()) / "autostart" / "stackyard.desktop"
 AUTOSTART_TEXT = """[Desktop Entry]
 Type=Application
-Name=Panel DDEV
-Comment=Panel DDEV tray icon
+Name=Stackyard
+Comment=Stackyard tray icon
 Exec={launcher} --hidden
-Icon=panel-ddev
+Icon=stackyard
 Terminal=false
 X-GNOME-Autostart-enabled=true
 """
+
+
+OLD_AUTOSTART = AUTOSTART.with_name("panel-ddev.desktop")  # name before 1.1.0
+
+
+def migrate_autostart(launcher):
+    """Replaces the autostart entry of the old app name with the new one."""
+    if OLD_AUTOSTART.exists():
+        OLD_AUTOSTART.unlink()
+        set_autostart(True, launcher)
 
 
 def available():
@@ -52,11 +62,11 @@ class Tray:
         self.launcher = launcher
         self.menu = None
         self.indicator = AppIndicator.Indicator.new(
-            "panel-ddev", "applications-development", AppIndicator.IndicatorCategory.APPLICATION_STATUS
+            "stackyard", "applications-development", AppIndicator.IndicatorCategory.APPLICATION_STATUS
         )
         if Path(icon_path).exists():
-            self.indicator.set_icon_full(icon_path, "Panel DDEV")
-        self.indicator.set_title("Panel DDEV")
+            self.indicator.set_icon_full(icon_path, "Stackyard")
+        self.indicator.set_title("Stackyard")
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         self.update([])
 
@@ -74,7 +84,7 @@ class Tray:
     def update(self, projects):
         w = self.window
         menu = Gtk.Menu()
-        self._item(menu, _("Open Panel DDEV"), self.show_window)
+        self._item(menu, _("Open Stackyard"), self.show_window)
         menu.append(Gtk.SeparatorMenuItem())
 
         if not projects:

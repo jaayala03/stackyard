@@ -1,13 +1,13 @@
-<p align="center"><img src="icon.svg" width="96" alt="Panel DDEV"></p>
+<p align="center"><img src="icon.svg" width="96" alt="Stackyard"></p>
 
-<h1 align="center">Panel DDEV</h1>
+<h1 align="center">Stackyard</h1>
 
 <p align="center">
 Tu entorno de desarrollo web local en Linux, desde una ventana.<br>
 Crea, clona y gestiona proyectos PHP, Laravel, WordPress y más — con <a href="https://ddev.com">DDEV</a> por debajo.
 </p>
 
-<p align="center"><a href="README.md">Read in English</a></p>
+<p align="center"><a href="README.md">Read in English</a> · Antes <i>Panel DDEV</i></p>
 
 ---
 
@@ -21,26 +21,26 @@ Gratis y de código abierto. En **español e inglés**, con tema **claro y oscur
 En **Linux Mint 22 / Ubuntu 24.04** (o derivados de Ubuntu/Debian), abre una terminal y ejecuta:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jaayala03/stackyard/main/install.sh | bash
 ```
 
 El instalador deja todo listo: **Docker**, **DDEV**, certificados HTTPS locales
-(**mkcert**) y **Panel DDEV**. Te pedirá tu contraseña de `sudo`.
+(**mkcert**) y **Stackyard**. Te pedirá tu contraseña de `sudo`.
 
 Al terminar:
 
 1. **Cierra sesión y vuelve a entrar** (para usar Docker sin `sudo`).
 2. **Reinicia el navegador** (para que acepte los certificados HTTPS).
-3. Abre **Panel DDEV** desde el menú de aplicaciones.
+3. Abre **Stackyard** desde el menú de aplicaciones.
 
 <details>
 <summary>Instalación manual (solo el paquete)</summary>
 
 Si ya tienes Docker y DDEV, descarga el `.deb` de la
-[última versión](https://github.com/jaayala03/panel-ddev/releases/latest) e instálalo:
+[última versión](https://github.com/jaayala03/stackyard/releases/latest) e instálalo:
 
 ```bash
-sudo apt install ./panel-ddev_*_all.deb
+sudo apt install ./stackyard_*_all.deb
 ```
 </details>
 
@@ -48,9 +48,9 @@ sudo apt install ./panel-ddev_*_all.deb
 <summary>Desde el código fuente</summary>
 
 ```bash
-git clone https://github.com/jaayala03/panel-ddev.git
-cd panel-ddev
-./panel-ddev                # ejecutar sin instalar
+git clone https://github.com/jaayala03/stackyard.git
+cd stackyard
+./bin/stackyard            # ejecutar sin instalar
 ./install.sh --local        # o construir e instalar el paquete
 ```
 </details>
@@ -58,7 +58,7 @@ cd panel-ddev
 ### Desinstalar
 
 ```bash
-sudo apt remove panel-ddev
+sudo apt remove stackyard
 ```
 
 (Docker, DDEV y tus proyectos no se tocan.)
@@ -107,7 +107,7 @@ comandos se lanzan, y si algo pide contraseña la escribes ahí mismo.
 
 - Código bajo licencia [MIT](LICENSE).
 - [Términos de uso y privacidad](TERMINOS.md): sin garantía; la app no recopila datos.
-- Panel DDEV es un proyecto **independiente**, no afiliado al proyecto
+- Stackyard es un proyecto **independiente**, no afiliado al proyecto
   [DDEV](https://github.com/ddev/ddev) ni a Docker. Sus nombres son marcas de sus titulares.
 
 La documentación para desarrolladores está en el [README en inglés](README.md#for-developers).

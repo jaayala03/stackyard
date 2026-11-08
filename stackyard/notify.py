@@ -22,7 +22,7 @@ def available():
     if Notify is None:
         return False
     if not _ready:
-        _ready = Notify.init("Panel DDEV")
+        _ready = Notify.init("Stackyard")
     return _ready
 
 
@@ -37,7 +37,7 @@ def should_notify(mode, window):
 def finished(title, ok, icon, on_click=None):
     if not available():
         return
-    body = _("Finished successfully.") if ok else _("Something went wrong. Open Panel DDEV to see the output.")
+    body = _("Finished successfully.") if ok else _("Something went wrong. Open Stackyard to see the output.")
     n = Notify.Notification.new(("✔ " if ok else "✘ ") + title, body, icon)
     n.set_urgency(Notify.Urgency.NORMAL if ok else Notify.Urgency.CRITICAL)
     if on_click:

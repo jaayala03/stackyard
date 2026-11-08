@@ -2,7 +2,7 @@
 
 Last updated: November 7, 2026 · [Versión en español](TERMINOS.md)
 
-By downloading, installing or using **Panel DDEV** ("the app") you agree to
+By downloading, installing or using **Stackyard** ("the app") you agree to
 these terms. If you do not agree, do not use it.
 
 ## 1. License
@@ -44,7 +44,7 @@ accepting their respective terms.
 ## 5. Trademarks
 
 "DDEV", "Docker", "GitHub", "Laravel", "WordPress" and other names mentioned are
-trademarks of their respective owners. **Panel DDEV is an independent project
+trademarks of their respective owners. **Stackyard is an independent project
 and is not affiliated with, sponsored or endorsed by the DDEV project or any of
 those companies.**
 

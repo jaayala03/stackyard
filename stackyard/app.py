@@ -1,4 +1,4 @@
-"""Panel DDEV main window and application."""
+"""Stackyard main window and application."""
 
 import shutil
 import threading
@@ -18,7 +18,7 @@ from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
 from .terminal import TerminalTabs  # noqa: E402
 
-APP_ID = "local.panel.ddev"
+APP_ID = "io.github.jaayala03.Stackyard"
 REFRESH_SECONDS = 10
 ICON = str(Path(__file__).resolve().parent.parent / "icon.svg")
 AUTHOR = "Jonathan Alberto Ayala Mendoza"
@@ -80,7 +80,7 @@ class ProjectRow(Gtk.ListBoxRow):
 
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="Panel DDEV")
+        super().__init__(application=app, title="Stackyard")
         self.set_default_size(1060, 720)
         if Path(ICON).exists():
             self.set_icon_from_file(ICON)
@@ -98,7 +98,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self._res_label = None
 
         # ---------------- header bar
-        header = Gtk.HeaderBar(show_close_button=True, title="Panel DDEV")
+        header = Gtk.HeaderBar(show_close_button=True, title="Stackyard")
         self.set_titlebar(header)
         self.header = header
         header.pack_start(icon_button("document-new-symbolic", _("New"), _("Create a new project"), self.on_new))
@@ -150,7 +150,7 @@ class MainWindow(Gtk.ApplicationWindow):
         menu = Gtk.Menu()
         for label, cb in (
             (_("Preferences"), self.on_preferences),
-            (_("About Panel DDEV"), self.on_about),
+            (_("About Stackyard"), self.on_about),
             (None, None),
             (_("Quit"), lambda: self.get_application().quit()),
         ):
@@ -256,7 +256,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.project_action(p, "stop")
             if self.get_application().prefs.get("notifications") != "never":
                 notify.finished(_("{name} stopped after {minutes} min without activity").format(name=name, minutes=minutes),
-                                True, ICON if Path(ICON).exists() else "panel-ddev", self._show_output)
+                                True, ICON if Path(ICON).exists() else "stackyard", self._show_output)
 
     def _update_tray(self):
         tray = getattr(self.get_application(), "tray", None)
@@ -434,7 +434,7 @@ class MainWindow(Gtk.ApplicationWindow):
     def _on_action_finished(self, title, code):
         mode = self.get_application().prefs.get("notifications", "background")
         if notify.should_notify(mode, self):
-            notify.finished(title, code == 0, ICON if Path(ICON).exists() else "panel-ddev", self._show_output)
+            notify.finished(title, code == 0, ICON if Path(ICON).exists() else "stackyard", self._show_output)
 
     def _show_output(self):
         self.show()
@@ -627,7 +627,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def on_about(self):
         dlg = Gtk.AboutDialog(transient_for=self, modal=True)
-        dlg.set_program_name("Panel DDEV")
+        dlg.set_program_name("Stackyard")
         dlg.set_version(__version__)
         dlg.set_comments(
             _("Create, clone and manage your DDEV projects from one window.") + "\n"
@@ -858,7 +858,7 @@ class PanelApp(Gtk.Application):
         settings.apply_theme(self.prefs["theme"])
 
     def _launcher(self):
-        return shutil.which("panel-ddev") or str(Path(__file__).resolve().parent.parent / "panel-ddev")
+        return shutil.which("stackyard") or str(Path(__file__).resolve().parent.parent / "bin" / "stackyard")
 
     def _new_window(self):
         win = MainWindow(self)
@@ -871,6 +871,7 @@ class PanelApp(Gtk.Application):
         if win is None:
             if traymod.available():
                 win = MainWindow(self)
+                traymod.migrate_autostart(self._launcher())
                 self.tray = traymod.Tray(self, win, ICON, self._launcher())
                 self.hold()  # stay alive in the tray when the window is closed
                 win.connect("delete-event", lambda w, _e: w.hide() or True)

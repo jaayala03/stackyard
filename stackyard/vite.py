@@ -15,7 +15,7 @@ CONFIG_NAMES = ("vite.config.js", "vite.config.ts", "vite.config.mjs", "vite.con
 DDEV_FILE = "config.vite.yaml"
 PORT = 5173
 
-DDEV_YAML = f"""# Added by Panel DDEV: exposes the Vite dev server (HMR) through DDEV.
+DDEV_YAML = f"""# Added by Stackyard: exposes the Vite dev server (HMR) through DDEV.
 web_extra_exposed_ports:
   - name: vite
     container_port: {PORT}
@@ -28,7 +28,7 @@ def server_block(tld):
     tld_re = re.escape(tld).replace("/", r"\/")
     return (
         "    server: {\n"
-        "        // Added by Panel DDEV: serve HMR through the DDEV URL\n"
+        "        // Added by Stackyard: serve HMR through the DDEV URL\n"
         "        host: '0.0.0.0',\n"
         f"        port: {PORT},\n"
         "        strictPort: true,\n"

@@ -12,8 +12,8 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from panel_ddev import ddev, i18n, resources  # noqa: E402
-from panel_ddev.terminal import wrapper_command  # noqa: E402
+from stackyard import ddev, i18n, resources  # noqa: E402
+from stackyard.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
     "name": "demo-app", "path": "/tmp/demo app's folder", "repo": "https://example.com/a b.git",
