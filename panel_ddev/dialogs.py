@@ -21,10 +21,15 @@ def combo(options, active, translate=True):
 
 
 class ProjectDialog(Gtk.Dialog):
-    """mode: 'new', 'clone' or 'edit'."""
+    """mode: 'new', 'clone', 'existing' or 'edit'."""
 
-    TITLES = {"new": "New project", "clone": "Clone a project with git", "edit": "Project settings"}
-    OK = {"new": "Create", "clone": "Clone and create", "edit": "Apply and restart"}
+    TITLES = {
+        "new": "New project",
+        "clone": "Clone a project with git",
+        "existing": "Add an existing folder",
+        "edit": "Project settings",
+    }
+    OK = {"new": "Create", "clone": "Clone and create", "existing": "Add and start", "edit": "Apply and restart"}
 
     def __init__(self, parent, mode, project=None):
         super().__init__(title=_(self.TITLES[mode]), transient_for=parent, modal=True)
@@ -63,11 +68,27 @@ class ProjectDialog(Gtk.Dialog):
             self.branch = Gtk.Entry(placeholder_text=_("the default branch"))
             self._add(_("Branch"), self.branch)
 
+        if mode == "existing":
+            self._section(_("Code"))
+            self.folder = Gtk.FileChooserButton(
+                title=_("Folder with your project's code"),
+                action=Gtk.FileChooserAction.SELECT_FOLDER,
+            )
+            if ddev.DEFAULT_PARENT.exists():
+                self.folder.set_current_folder(str(ddev.DEFAULT_PARENT))
+            self.folder.connect("file-set", self._on_folder_set)
+            self._add(_("Folder"), self.folder)
+            self.detected = Gtk.Label(xalign=0, wrap=True)
+            self.detected.get_style_context().add_class("dim-label")
+            grid.attach(self.detected, 1, self._row, 1, 1)
+            self._row += 1
+
         if mode != "edit":
             self._section(_("Project"))
             self.name = Gtk.Entry(placeholder_text="my-project")
             self.name.connect("changed", self._on_name_changed)
             self._add(_("Name"), self.name)
+        if mode in ("new", "clone"):
             self.parent_dir = Gtk.FileChooserButton(
                 title=_("Folder where the project is saved"),
                 action=Gtk.FileChooserAction.SELECT_FOLDER,
@@ -76,6 +97,7 @@ class ProjectDialog(Gtk.Dialog):
             self.parent_dir.set_filename(str(ddev.DEFAULT_PARENT))
             self.parent_dir.connect("file-set", lambda *_a: self._validate())
             self._add(_("Save in"), self.parent_dir)
+        if mode != "edit":
             self.summary = Gtk.Label(xalign=0, selectable=True)
             self.summary.get_style_context().add_class("dim-label")
             grid.attach(self.summary, 1, self._row, 1, 1)
@@ -83,8 +105,8 @@ class ProjectDialog(Gtk.Dialog):
 
         # ---------- environment
         self._section(_("Environment"))
-        types = ([ddev.AUTO_TYPE] if mode == "clone" else []) + ddev.PROJECT_TYPES
-        current_type = p.get("cfg_type") or p.get("type") or ("" if mode == "clone" else "php")
+        types = ([ddev.AUTO_TYPE] if mode in ("clone", "existing") else []) + ddev.PROJECT_TYPES
+        current_type = p.get("cfg_type") or p.get("type") or ("" if mode in ("clone", "existing") else "php")
         self.type = combo(types, current_type)
         self.type.connect("changed", self._on_type_changed)
         self._add(_("Type"), self.type)
@@ -117,7 +139,7 @@ class ProjectDialog(Gtk.Dialog):
             if mode == "new":
                 self.scaffold = Gtk.CheckButton()
                 box.pack_start(self.scaffold, False, False, 0)
-            else:
+            else:  # clone / existing
                 self.deps = Gtk.CheckButton(label=_("Install dependencies (composer install, npm install)"), active=True)
                 box.pack_start(self.deps, False, False, 0)
             self.pma = Gtk.CheckButton(label=_("Add phpMyAdmin"))
@@ -166,6 +188,34 @@ class ProjectDialog(Gtk.Dialog):
             self.name.handler_unblock_by_func(self._on_name_changed)
         self._validate()
 
+    def _on_folder_set(self, chooser):
+        path = chooser.get_filename()
+        if not path:
+            return
+        if not self._name_touched:
+            self.name.handler_block_by_func(self._on_name_changed)
+            self.name.set_text(ddev.name_from_repo(path))
+            self.name.handler_unblock_by_func(self._on_name_changed)
+        cfg = ddev.read_config(path)
+        if cfg["cfg_type"]:
+            # The folder already has a DDEV config: start from its values
+            self.type.set_active_id(cfg["cfg_type"])
+            self.docroot.set_text(cfg["cfg_docroot"])
+            for widget, key in ((self.php, "cfg_php"), (self.node, "cfg_node"), (self.webserver, "cfg_webserver"), (self.db, "cfg_db")):
+                if cfg[key]:
+                    widget.set_active_id(cfg[key])
+            self.detected.set_text(_("This folder already has a DDEV configuration; its values are loaded."))
+        else:
+            kind, docroot = ddev.detect_type(path)
+            self.type.set_active_id(kind)
+            self.docroot.set_text(docroot)
+            self._docroot_touched = False
+            self.detected.set_text(
+                _("Detected: {framework}").format(framework=ddev.label_for(ddev.PROJECT_TYPES, kind)) if kind
+                else _("No framework detected; DDEV will try to detect it.")
+            )
+        self._validate()
+
     def _on_browse(self, _btn):
         picker = github.RepoPicker(self)
         if picker.run() == Gtk.ResponseType.OK and picker.selected:
@@ -196,6 +246,8 @@ class ProjectDialog(Gtk.Dialog):
 
     # ------------------------------------------------------------ validation
     def _target(self):
+        if self.mode == "existing":
+            return Path(self.folder.get_filename() or "")
         parent = self.parent_dir.get_filename() or str(ddev.DEFAULT_PARENT)
         return Path(parent) / self.name.get_text().strip()
 
@@ -206,11 +258,13 @@ class ProjectDialog(Gtk.Dialog):
             target = self._target()
             if self.mode == "clone" and not self.repo.get_text().strip():
                 msg = _("Enter the repository URL.")
+            elif self.mode == "existing" and not self.folder.get_filename():
+                msg = _("Choose the folder with your project's code.")
             elif not name:
                 msg = _("Enter a name for the project.")
             elif not ddev.NAME_RE.match(name):
                 msg = _("The name can only contain lowercase letters, numbers and hyphens.")
-            elif target.exists() and any(target.iterdir()):
+            elif self.mode != "existing" and target.exists() and any(target.iterdir()):
                 msg = _("The folder {path} already exists and is not empty.").format(path=target)
             if name and ddev.NAME_RE.match(name):
                 self.summary.set_text(f"{target}\nhttps://{name}.{ddev.project_tld()}")
@@ -240,11 +294,9 @@ class ProjectDialog(Gtk.Dialog):
         if self.mode == "new":
             o["scaffold"] = self.scaffold.get_active()
         if self.mode == "clone":
-            o.update(
-                repo=self.repo.get_text().strip(),
-                branch=self.branch.get_text().strip(),
-                deps=self.deps.get_active(),
-            )
+            o.update(repo=self.repo.get_text().strip(), branch=self.branch.get_text().strip())
+        if self.mode in ("clone", "existing"):
+            o["deps"] = self.deps.get_active()
         return o
 
 

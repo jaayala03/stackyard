@@ -76,6 +76,8 @@ sudo apt remove panel-ddev
 - **Clone with git**: paste a URL or pick one of **your GitHub repositories** (search included); choose the branch; configures DDEV, starts the project and
   installs dependencies (`composer install`, `npm install`, `.env` and
   `APP_KEY` for Laravel).
+- **Add folder**: use code you already have; the framework and public folder
+  are detected automatically.
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
 - **Tools**: shell inside the container, live logs, phpMyAdmin, Mailpit,
   database import/export.
@@ -107,6 +109,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/settings.py` | Preferences and theme |
 | `packaging/build-deb.sh` | Builds the `.deb` into `dist/` |
 | `packaging/check_translations.py` | Fails if a UI string has no translation |
+| `packaging/test_scripts.py` | Smoke tests for the generated bash scripts |
 | `packaging/release.sh` | Publishes a GitHub release with the `.deb` |
 | `install.sh` | Full installer |
 

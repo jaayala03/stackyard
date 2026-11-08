@@ -74,6 +74,8 @@ sudo apt remove panel-ddev
   datos. Puede descargar el framework automáticamente.
 - **Clonar con git**: pega una URL o elige uno de **tus repositorios de GitHub** (con buscador); elige la rama; configura DDEV, arranca e instala dependencias
   (`composer install`, `npm install`, `.env` y `APP_KEY` en Laravel).
+- **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
+  carpeta pública automáticamente.
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,
   Mailpit, importar/exportar la base de datos.

@@ -9,6 +9,7 @@ BUILD="$ROOT/build/${PKG}_${VERSION}"
 OUT="$ROOT/dist/${PKG}_${VERSION}_all.deb"
 
 python3 "$ROOT/packaging/check_translations.py" >/dev/null
+python3 "$ROOT/packaging/test_scripts.py" >/dev/null
 
 rm -rf "$BUILD"
 mkdir -p "$BUILD/DEBIAN" "$BUILD/usr/lib/$PKG" "$BUILD/usr/bin" \

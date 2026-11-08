@@ -4,6 +4,20 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.5.0] - 2026-11-07
+
+### Added
+- **Add folder**: use a folder you already have with DDEV. The project type and
+  public folder are detected (Laravel, WordPress, Drupal, Symfony, CodeIgniter,
+  Craft CMS, CakePHP, Magento or plain PHP); if the folder already has a
+  `.ddev/config.yaml`, its values are loaded. Optionally installs dependencies.
+- Automated smoke tests for the generated scripts (`packaging/test_scripts.py`),
+  run on every package build.
+
+### Fixed
+- Project actions (start, stop, create, clone…) failed immediately in 0.3.0
+  and 0.4.0 because of a quoting error in the generated scripts. Please update.
+
 ## [0.4.0] - 2026-11-07
 
 ### Added

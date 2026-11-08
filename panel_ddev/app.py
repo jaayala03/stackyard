@@ -95,6 +95,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.header = header
         header.pack_start(icon_button("document-new-symbolic", _("New"), _("Create a new project"), self.on_new))
         header.pack_start(icon_button("folder-download-symbolic", _("Clone"), _("Clone a repository with git"), self.on_clone))
+        header.pack_start(icon_button("folder-new-symbolic", _("Add folder"), _("Use a folder you already have with DDEV"), self.on_add_existing))
         header.pack_end(self._build_menu_button())
         header.pack_end(icon_button("system-shutdown-symbolic", _("Stop all"), _("Stop every project (ddev poweroff)"), self.on_poweroff))
         refresh = Gtk.Button.new_from_icon_name("view-refresh-symbolic", Gtk.IconSize.BUTTON)
@@ -104,7 +105,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # ---------------- project list
         self.listbox = Gtk.ListBox()
-        self.listbox.set_placeholder(self._placeholder_label(_("No projects yet.\nCreate one with “New” or “Clone”.")))
+        self.listbox.set_placeholder(self._placeholder_label(_("No projects yet.\nCreate one with “New”, “Clone” or “Add folder”.")))
         self.listbox.connect("row-selected", self.on_row_selected)
         list_scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         list_scroll.set_size_request(280, -1)
@@ -496,6 +497,12 @@ class MainWindow(Gtk.ApplicationWindow):
         if o:
             self._pending_select = o["name"]
             self.run_script(f"{o['name']}: {_('clone')}", ddev.script_create(o), {"name": o["name"]})
+
+    def on_add_existing(self):
+        o = self._project_dialog("existing")
+        if o:
+            self._pending_select = o["name"]
+            self.run_script(f"{o['name']}: {_('add')}", ddev.script_create(o), {"name": o["name"]})
 
     def on_edit(self):
         p = self.selected

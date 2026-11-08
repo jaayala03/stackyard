@@ -161,6 +161,34 @@ def name_from_repo(url):
     return base
 
 
+# (marker files, project type, docroot) checked in order
+_DETECT = [
+    (("artisan",), "laravel", "public"),
+    (("wp-config.php",), "wordpress", ""),
+    (("wp-content",), "wordpress", ""),
+    (("web/core",), "drupal11", "web"),
+    (("symfony.lock",), "symfony", "public"),
+    (("bin/console", "public/index.php"), "symfony", "public"),
+    (("spark",), "codeigniter", "public"),
+    (("craft",), "craftcms", "web"),
+    (("bin/cake",), "cakephp", "webroot"),
+    (("bin/magento",), "magento2", "pub"),
+]
+
+
+def detect_type(path):
+    """Best guess of (project type, docroot) from the files in `path`."""
+    root = Path(path)
+    for markers, kind, docroot in _DETECT:
+        if all((root / m).exists() for m in markers):
+            return kind, docroot
+    if (root / "public" / "index.php").exists():
+        return "php", "public"
+    if any(root.glob("*.php")):
+        return "php", ""
+    return "", ""
+
+
 def label_for(options, value):
     """Translated label of `value` in a list of (value, label, ...) tuples."""
     for v, label, *_rest in options:
@@ -181,7 +209,8 @@ def _header():
         "set -eo pipefail\n"
         "step() { printf '\\n\\033[1;36m==> %s\\033[0m\\n' \"$*\"; }\n"
         "ok()   { printf '\\n\\033[1;32m✔ %s\\033[0m\\n' \"$*\"; }\n"
-        f"trap 'printf \"\\n\\033[1;31m✘ %s\\033[0m\\n\" {_q(failed)}' ERR\n"
+        f"FAILED_MSG={_q(failed)}\n"
+        "trap 'printf \"\\n\\033[1;31m✘ %s\\033[0m\\n\" \"$FAILED_MSG\"' ERR\n"
     )
 
 
@@ -211,7 +240,7 @@ def _config_flags(o, include_name=True):
 
 
 def script_create(o):
-    """o: mode('new'|'clone'), name, path, repo, branch, type, docroot, php,
+    """o: mode('new'|'clone'|'existing'), name, path, repo, branch, type, docroot, php,
     node, webserver, db, scaffold, deps, phpmyadmin, launch."""
     path = o["path"]
     s = [_header()]
@@ -219,6 +248,8 @@ def script_create(o):
         branch = f"--branch {_q(o['branch'])} " if o.get("branch") else ""
         s.append(_step(_("Cloning {repo}").format(repo=o["repo"])))
         s.append(f"git clone {branch}{_q(o['repo'])} {_q(path)}")
+        s.append(f"cd {_q(path)}")
+    elif o["mode"] == "existing":
         s.append(f"cd {_q(path)}")
     else:
         s.append(_step(_("Creating folder {path}").format(path=path)))
@@ -252,7 +283,7 @@ def script_create(o):
     s.append(_step(_("Starting the project (it may ask for your password to add the domain)")))
     s.append("ddev start")
 
-    if o["mode"] == "clone" and o.get("deps"):
+    if o["mode"] in ("clone", "existing") and o.get("deps"):
         s.append(f"if [ -f composer.json ]; then {_step('composer install')}; ddev composer install; fi")
         s.append(
             "if [ -f artisan ] && ! grep -q '^APP_KEY=.\\+' .env 2>/dev/null; then "
