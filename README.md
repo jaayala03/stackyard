@@ -73,7 +73,7 @@ sudo apt remove panel-ddev
 - **New project**: type (PHP, Laravel, WordPress, Symfony, Drupal, CodeIgniter,
   CakePHP, Craft CMS, Magento), PHP and Node version, Apache or nginx,
   database. It can download the framework for you.
-- **Clone with git**: URL and branch; configures DDEV, starts the project and
+- **Clone with git**: paste a URL or pick one of **your GitHub repositories** (search included); choose the branch; configures DDEV, starts the project and
   installs dependencies (`composer install`, `npm install`, `.env` and
   `APP_KEY` for Laravel).
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
@@ -101,6 +101,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
 | `panel_ddev/git.py` | Git tab |
 | `panel_ddev/tray.py` | Tray icon |
+| `panel_ddev/github.py` | GitHub repository picker (uses `gh`) |
 | `panel_ddev/terminal.py` | Embedded terminal (VTE) |
 | `panel_ddev/i18n.py`, `locale_es.py` | Translations |
 | `panel_ddev/settings.py` | Preferences and theme |

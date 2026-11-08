@@ -4,6 +4,14 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.4.0] - 2026-11-07
+
+### Added
+- **Clone from your GitHub repositories**: "My repositories…" in the clone
+  dialog lists your repositories and those of your organizations (via the
+  GitHub CLI), with search, private/fork/archived tags, language and last
+  update. Picking one fills the URL using your gh git protocol (HTTPS or SSH).
+
 ## [0.3.0] - 2026-11-07
 
 ### Added

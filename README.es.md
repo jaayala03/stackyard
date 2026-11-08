@@ -72,7 +72,7 @@ sudo apt remove panel-ddev
 - **Nuevo proyecto**: tipo (PHP, Laravel, WordPress, Symfony, Drupal, CodeIgniter,
   CakePHP, Craft CMS, Magento), versión de PHP y Node, Apache o nginx, base de
   datos. Puede descargar el framework automáticamente.
-- **Clonar con git**: URL y rama; configura DDEV, arranca e instala dependencias
+- **Clonar con git**: pega una URL o elige uno de **tus repositorios de GitHub** (con buscador); elige la rama; configura DDEV, arranca e instala dependencias
   (`composer install`, `npm install`, `.env` y `APP_KEY` en Laravel).
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,

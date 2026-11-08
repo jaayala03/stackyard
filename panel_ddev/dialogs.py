@@ -7,7 +7,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-from . import ddev, settings  # noqa: E402
+from . import ddev, github, settings  # noqa: E402
 from .i18n import _  # noqa: E402
 
 
@@ -49,7 +49,17 @@ class ProjectDialog(Gtk.Dialog):
             self._section(_("Repository"))
             self.repo = Gtk.Entry(placeholder_text="https://github.com/user/project.git")
             self.repo.connect("changed", self._on_repo_changed)
-            self._add(_("URL"), self.repo)
+            url_box = Gtk.Box(spacing=6)
+            url_box.pack_start(self.repo, True, True, 0)
+            browse = Gtk.Button(label=_("My repositories…"))
+            if github.gh_logged_in():
+                browse.set_tooltip_text(_("Pick one of your GitHub repositories"))
+                browse.connect("clicked", self._on_browse)
+            else:
+                browse.set_sensitive(False)
+                browse.set_tooltip_text(_("Install the GitHub CLI (gh) and run “gh auth login” to list your repositories"))
+            url_box.pack_start(browse, False, False, 0)
+            self._add(_("URL"), url_box)
             self.branch = Gtk.Entry(placeholder_text=_("the default branch"))
             self._add(_("Branch"), self.branch)
 
@@ -155,6 +165,13 @@ class ProjectDialog(Gtk.Dialog):
             self.name.set_text(ddev.name_from_repo(entry.get_text().strip()))
             self.name.handler_unblock_by_func(self._on_name_changed)
         self._validate()
+
+    def _on_browse(self, _btn):
+        picker = github.RepoPicker(self)
+        if picker.run() == Gtk.ResponseType.OK and picker.selected:
+            self.repo.set_text(github.clone_url(picker.selected, picker.protocol))
+            self.name.grab_focus()
+        picker.destroy()
 
     def _on_name_changed(self, _entry):
         self._name_touched = True
