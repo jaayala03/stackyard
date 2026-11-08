@@ -107,6 +107,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/settings.py` | Preferences and theme |
 | `packaging/build-deb.sh` | Builds the `.deb` into `dist/` |
 | `packaging/check_translations.py` | Fails if a UI string has no translation |
+| `packaging/release.sh` | Publishes a GitHub release with the `.deb` |
 | `install.sh` | Full installer |
 
 Built with Python 3 and GTK 3 (PyGObject). Code, comments and commits are in
@@ -114,8 +115,9 @@ English. UI strings are written in English and wrapped in `_()`; add the Spanish
 text to `panel_ddev/locale_es.py`.
 
 To publish a release: bump `__version__` in `panel_ddev/__init__.py`, add the
-entry to `CHANGELOG.md`, run `packaging/build-deb.sh` and attach the `.deb` to
-the GitHub release.
+entry to `CHANGELOG.md`, commit and push, then run `packaging/release.sh` (builds
+the `.deb`, tags the version and creates the GitHub release with the changelog
+notes).
 
 ## License and terms
 
