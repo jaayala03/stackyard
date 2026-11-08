@@ -4,6 +4,16 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- The one-line installer (`curl … | bash`) stopped after "Base packages"
+  because apt read the rest of the piped script from stdin. The script now runs
+  inside a function, so it is read completely before anything executes.
+
+### Changed
+- CI can also be started manually (workflow_dispatch).
+
 ## [1.3.0] - 2026-11-07
 
 ### Added
