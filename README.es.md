@@ -77,6 +77,7 @@ sudo apt remove panel-ddev
 - **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
   carpeta pública automáticamente.
 - **Xdebug**: actívalo o desactívalo con un interruptor.
+- **Compartir** un proyecto con un enlace público temporal (túnel de Cloudflare).
 - **Editor de .env** con colores, copia de seguridad y «crear desde .env.example».
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los

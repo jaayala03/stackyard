@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, snapshots  # noqa: E402
+from . import commands, envedit, share, snapshots  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -363,6 +363,7 @@ class MainWindow(Gtk.ApplicationWindow):
             ("document-save-symbolic", _("Export DB…"), _("Save the database to a file"), self.on_export_db, running and not busy),
             ("document-revert-symbolic", _("Snapshots…"), _("Save and restore copies of the database"), self.on_snapshots, running and not busy),
             ("document-properties-symbolic", _("Edit .env…"), _("Edit the project's environment variables"), self.on_env, not busy),
+            ("emblem-shared-symbolic", _("Share…"), _("Get a temporary public link to show your site"), self.on_share, running and not busy),
             ("package-x-generic-symbolic", "composer install", None, lambda: self.quick("composer install", "ddev composer install"), running and not busy),
             ("package-x-generic-symbolic", "npm install", None, lambda: self.quick("npm install", "ddev npm install"), running and not busy),
         ]
@@ -665,6 +666,38 @@ class MainWindow(Gtk.ApplicationWindow):
         if path:
             script = ddev.script_simple(p["approot"], [(_("Exporting database"), f"ddev export-db --file={ddev._q(path)}")], _("Saved to {path}").format(path=path))
             self.run_script(f"{p['name']}: {_('export DB')}", script, p)
+
+    def on_share(self):
+        p = self.selected
+        prov = share.provider()
+        if prov is None:
+            if self.confirm(
+                _("Install cloudflared to share?"),
+                _("Sharing uses Cloudflare quick tunnels (free, no account). cloudflared will be installed from "
+                  "Cloudflare's official repository; it may ask for your password."),
+                _("Install"),
+            ):
+                self.terms.run(_("Install cloudflared"), share.install_script(),
+                               on_done=lambda code: code == 0 and self.on_share())
+            return
+        if not self.confirm(
+            _("Share {name} on the internet?").format(name=p["name"]),
+            _("A temporary public link is created. Anyone who has it can see your site until you close the share tab."),
+            _("Share"),
+        ):
+            return
+        term = self.terms.interactive(f"{p['name']}: share", share.share_command(prov), cwd=p["approot"])
+        state = {"shown": False}
+
+        def on_contents(t):
+            if state["shown"]:
+                return
+            url = share.find_url(TerminalTabs.text_of(t))
+            if url:
+                state["shown"] = True
+                share.ShareDialog(self, p["name"], url)
+
+        term.connect("contents-changed", on_contents)
 
     def on_env(self):
         p = self.selected

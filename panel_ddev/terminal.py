@@ -58,8 +58,16 @@ class TerminalTabs(Gtk.Notebook):
         self._spawn(title, ddev.shell_argv(f"bash {path}; rm -f {path}"), cwd, on_done)
 
     def interactive(self, title, command, cwd=None, on_done=None):
-        """Opens an interactive session (ddev ssh, logs -f…)."""
-        self._spawn(title, ddev.shell_argv(command), cwd, on_done)
+        """Opens an interactive session (ddev ssh, logs -f…). Returns the Vte.Terminal."""
+        return self._spawn(title, ddev.shell_argv(command), cwd, on_done)
+
+    @staticmethod
+    def text_of(term):
+        """Visible text of a terminal (get_text() is deprecated in recent VTE)."""
+        try:
+            return term.get_text_format(Vte.Format.TEXT) or ""
+        except (AttributeError, TypeError):
+            return term.get_text(None, None)[0] or ""
 
     def running_count(self):
         return sum(1 for t in self._terms if getattr(t, "running", False))
@@ -140,3 +148,4 @@ class TerminalTabs(Gtk.Notebook):
             None,
             None,
         )
+        return term

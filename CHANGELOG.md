@@ -4,6 +4,15 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.10.0] - 2026-11-07
+
+### Added
+- **Share** (Tools → Share…): creates a temporary public link to your site with
+  `ddev share`, using Cloudflare quick tunnels (free, no account) or ngrok if
+  that is what you have. When the link is ready a window shows it with "Copy
+  link" and "Open"; closing the share tab stops sharing. If cloudflared is
+  missing, the app offers to install it from Cloudflare's official repository.
+
 ## [0.9.0] - 2026-11-07
 
 ### Added
