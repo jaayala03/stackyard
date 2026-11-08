@@ -56,7 +56,7 @@ Section: devel
 Priority: optional
 Architecture: all
 Installed-Size: $SIZE
-Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, python3-yaml, git
+Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gir1.2-gtksource-4, python3-yaml, git
 Recommends: ddev, gir1.2-ayatanaappindicator3-0.1, gir1.2-notify-0.7, gh
 Maintainer: Jonathan Alberto Ayala Mendoza <17535726+jaayala03@users.noreply.github.com>
 Homepage: https://github.com/jaayala03/stackyard

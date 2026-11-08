@@ -115,7 +115,7 @@ class Tray:
         auto.connect("toggled", lambda item: set_autostart(item.get_active(), self.launcher))
         menu.append(auto)
         menu.append(Gtk.SeparatorMenuItem())
-        self._item(menu, _("Quit"), self.app.quit)
+        self._item(menu, _("Quit"), self.app.request_quit)
         menu.show_all()
         self.indicator.set_menu(menu)
         self.menu = menu

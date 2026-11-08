@@ -87,6 +87,8 @@ sudo apt remove stackyard
   `package.json` scripts and your own saved commands per project.
 - **Tools**: shell inside the container, live logs, phpMyAdmin, Mailpit,
   database import/export and **snapshots** (save and restore copies of the database).
+- **Code editor**: file explorer (create, rename, copy, cut, paste, duplicate,
+  trash), tabs, syntax highlighting, find/replace and Ctrl+P quick open.
 - **Git**: changes with checkboxes to stage them, coloured diffs, history,
   commit (Ctrl+Enter), branches, fetch, pull (fast-forward, merge or rebase) and
   push, discard changes, stash, and conflict resolution (ours / theirs).
@@ -113,6 +115,7 @@ run, and if something asks for a password you type it right there.
 | `stackyard/ddev.py` | Talks to `ddev` and builds the script of each action |
 | `stackyard/dialogs.py` | New / clone / settings and preferences dialogs |
 | `stackyard/git.py` | Git tab |
+| `stackyard/editor.py` | Code tab: file explorer and editor |
 | `stackyard/tray.py` | Tray icon |
 | `stackyard/resources.py` | Resource usage and idle detection |
 | `stackyard/notify.py` | Desktop notifications |

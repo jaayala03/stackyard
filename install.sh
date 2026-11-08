@@ -33,7 +33,7 @@ ARCH=$(dpkg --print-architecture)
 step "Base packages" "Paquetes base"
 sudo apt-get update -qq
 sudo apt-get install -y -qq ca-certificates curl gnupg git libnss3-tools \
-  python3 python3-gi python3-yaml gir1.2-gtk-3.0 gir1.2-vte-2.91 \
+  python3 python3-gi python3-yaml gir1.2-gtk-3.0 gir1.2-vte-2.91 gir1.2-gtksource-4 \
   gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 >/dev/null
 ok "Done" "Listo"
 

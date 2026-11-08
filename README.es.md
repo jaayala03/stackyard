@@ -86,6 +86,9 @@ sudo apt remove stackyard
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,
   Mailpit, importar/exportar la base de datos y **copias** (guardar y restaurar
   copias completas de la base de datos).
+- **Editor de código**: explorador (crear, renombrar, copiar, cortar, pegar,
+  duplicar, papelera), pestañas, resaltado de sintaxis, buscar/reemplazar y
+  Ctrl+P para abrir archivos.
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,
   historial, commit (Ctrl+Enter), ramas, fetch, pull (fast-forward, merge o
   rebase) y push, descartar cambios, stash y resolución de conflictos.

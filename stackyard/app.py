@@ -14,6 +14,7 @@ from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
 from . import commands, envedit, notify, resources, share, snapshots, vite  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
+from .editor import EditorView  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
 from .terminal import TerminalTabs  # noqa: E402
@@ -89,6 +90,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.busy = set()  # projects with an action in progress
         self.editor = ddev.find_editor()
         self.git_views = {}
+        self.editors = {}
         self.current_page = "project"
         self._rebuilding = False
         self._pending_select = None
@@ -133,6 +135,8 @@ class MainWindow(Gtk.ApplicationWindow):
         bottom.pack1(top, True, False)
         bottom.pack2(self.terms, False, True)
         bottom.set_position(440)
+        self.bottom = bottom
+        self._terminal_pos = 440
         self.add(bottom)
 
         self.show_all()
@@ -152,7 +156,7 @@ class MainWindow(Gtk.ApplicationWindow):
             (_("Preferences"), self.on_preferences),
             (_("About Stackyard"), self.on_about),
             (None, None),
-            (_("Quit"), lambda: self.get_application().quit()),
+            (_("Quit"), lambda: self.get_application().request_quit()),
         ):
             if label is None:
                 menu.append(Gtk.SeparatorMenuItem())
@@ -289,7 +293,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # detach them before the old stack is destroyed. Detaching makes the old
         # stack switch page: _rebuilding tells _on_page_changed to ignore it.
         self._rebuilding = True
-        for view in self.git_views.values():
+        for view in list(self.git_views.values()) + list(self.editors.values()):
             if view.get_parent():
                 view.get_parent().remove(view)
         self._rebuilding = False
@@ -332,6 +336,10 @@ class MainWindow(Gtk.ApplicationWindow):
         if gitview.get_parent():
             gitview.get_parent().remove(gitview)
         stack.add_titled(gitview, "git", "Git")
+        editor = self._editor(p)
+        if editor.get_parent():
+            editor.get_parent().remove(editor)
+        stack.add_titled(editor, "code", _("Code"))
         self.detail.pack_start(stack, True, True, 0)
 
         url = p.get("primary_url") or p.get("httpsurl", "")
@@ -559,9 +567,31 @@ class MainWindow(Gtk.ApplicationWindow):
     def _on_page_changed(self, stack, _pspec, gitview):
         if self._rebuilding:
             return
-        self.current_page = stack.get_visible_child_name()
+        previous, self.current_page = self.current_page, stack.get_visible_child_name()
         if self.current_page == "git":
             gitview.refresh()
+        # the editor gets most of the height; the terminal comes back on other pages
+        if self.current_page == "code" and previous != "code":
+            self._terminal_pos = self.bottom.get_position()
+            self.bottom.set_position(max(self._terminal_pos, self.bottom.get_allocated_height() - 150))
+        elif previous == "code" and self.current_page != "code":
+            self.bottom.set_position(self._terminal_pos)
+
+    def _editor(self, p):
+        view = self.editors.get(p["name"])
+        if view is None or view.root != Path(p["approot"]):
+            view = EditorView(p["approot"], self)
+            self.editors[p["name"]] = view
+        return view
+
+    def confirm_unsaved(self):
+        """Asks about unsaved editor files. False if the user cancelled."""
+        for name, view in self.editors.items():
+            if view.has_unsaved():
+                self.select_project(name)
+                if not view.close_all():
+                    return False
+        return True
 
     def _git_view(self, p):
         view = self.git_views.get(p["name"])
@@ -892,8 +922,15 @@ class PanelApp(Gtk.Application):
         for w in self.get_windows():
             if isinstance(w, MainWindow):
                 w.terms.set_dark(dark)
+                for editor in w.editors.values():
+                    editor.update_scheme()
         if self.prefs["language"] != old["language"]:
             self.rebuild_ui()
+
+    def request_quit(self):
+        win = next((w for w in self.get_windows() if isinstance(w, MainWindow)), None)
+        if win is None or win.confirm_unsaved():
+            self.quit()
 
     def rebuild_ui(self):
         """Recreates the window so every label uses the new language."""
@@ -904,6 +941,8 @@ class PanelApp(Gtk.Application):
                 _("Language saved"),
                 _("It will apply when the running actions finish and you reopen the app."),
             )
+            return
+        if old and not old.confirm_unsaved():
             return
         selected = old.selected["name"] if old and old.selected else None
         page = old.current_page if old else "project"

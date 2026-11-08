@@ -4,6 +4,23 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [1.2.0] - 2026-11-07
+
+### Added
+- **Code** tab: a built-in editor for each project.
+  - File explorer: new file/folder, rename (F2), copy (Ctrl+C), cut (Ctrl+X),
+    paste (Ctrl+V), duplicate (Ctrl+D), move to trash (Delete), copy path and
+    open in the file manager. Folders load on demand.
+  - Tabbed editor (GtkSourceView) with syntax highlighting for PHP, Blade,
+    JavaScript/TypeScript, Vue, CSS, HTML, JSON, YAML, SQL, Markdown, `.env`
+    and more; line numbers, current-line highlight, bracket matching and smart
+    indentation. The colour scheme follows the light/dark theme.
+  - Find (Ctrl+F) and replace (Ctrl+H) with match case and regular expressions,
+    quick open by name (Ctrl+P, respects `.gitignore`), save (Ctrl+S) and close
+    (Ctrl+W). Unsaved files are marked with ● and you are asked before closing
+    or quitting. Files changed on disk are reloaded.
+  - The terminal panel shrinks while the Code tab is open.
+
 ## [1.1.0] - 2026-11-07
 
 ### Changed
