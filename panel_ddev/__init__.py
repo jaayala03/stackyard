@@ -1,4 +1,4 @@
 """Panel DDEV: a desktop app to manage DDEV projects."""
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 REPO_URL = "https://github.com/jaayala03/panel-ddev"

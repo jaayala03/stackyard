@@ -4,6 +4,14 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.9.0] - 2026-11-07
+
+### Added
+- **.env editor** (Tools → Edit .env…): edit `.env` and the other `.env.*`
+  files of the project with key and comment highlighting. Creates `.env` from
+  `.env.example` with one click, keeps the previous version as `.env.bak`,
+  saves with Ctrl+S and, for Laravel, can clear the config cache afterwards.
+
 ## [0.8.0] - 2026-11-07
 
 ### Added

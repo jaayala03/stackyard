@@ -79,6 +79,7 @@ sudo apt remove panel-ddev
 - **Add folder**: use code you already have; the framework and public folder
   are detected automatically.
 - **Xdebug** on/off with a switch.
+- **.env editor** with highlighting, backup and "create from .env.example".
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
 - **Quick commands**: framework shortcuts (artisan, wp-cli, drush…), your
   `package.json` scripts and your own saved commands per project.
@@ -106,6 +107,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
 | `panel_ddev/git.py` | Git tab |
 | `panel_ddev/tray.py` | Tray icon |
+| `panel_ddev/envedit.py` | .env editor |
 | `panel_ddev/snapshots.py` | Database snapshots dialog |
 | `panel_ddev/commands.py` | Quick commands per framework, npm scripts and saved commands |
 | `panel_ddev/github.py` | GitHub repository picker (uses `gh`) |
