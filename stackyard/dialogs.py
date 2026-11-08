@@ -5,10 +5,28 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gdk, Gtk  # noqa: E402
 
 from . import ddev, github, notify, resources, settings  # noqa: E402
 from .i18n import _  # noqa: E402
+
+
+def scrollable(dialog, child, parent=None):
+    """Puts `child` in the dialog inside a scrolled area that grows with its
+    content but never beyond the screen, so the buttons stay visible on small
+    screens."""
+    height = 768
+    display = Gdk.Display.get_default()
+    if display:
+        gdk_win = parent.get_window() if parent and parent.get_window() else None
+        monitor = display.get_monitor_at_window(gdk_win) if gdk_win else display.get_primary_monitor() or display.get_monitor(0)
+        if monitor:
+            height = monitor.get_workarea().height
+    scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, propagate_natural_height=True)
+    scroll.set_max_content_height(max(300, height - 160))  # room for title bar and buttons
+    scroll.add(child)
+    dialog.get_content_area().pack_start(scroll, True, True, 0)
+    return scroll
 
 
 def combo(options, active, translate=True):
@@ -44,7 +62,7 @@ class ProjectDialog(Gtk.Dialog):
         self._name_touched = False
 
         grid = Gtk.Grid(column_spacing=12, row_spacing=10, margin=18)
-        self.get_content_area().add(grid)
+        scrollable(self, grid, parent)
         self.grid = grid
         self._row = 0
 

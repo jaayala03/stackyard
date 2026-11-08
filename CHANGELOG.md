@@ -4,9 +4,12 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.1] - 2026-11-08
 
 ### Fixed
+- The New / Clone / Add folder dialogs were taller than small screens (e.g.
+  1280×800 with a taskbar), hiding the Create / Cancel buttons. Their content
+  now scrolls and the buttons always stay visible.
 - The one-line installer (`curl … | bash`) stopped after "Base packages"
   because apt read the rest of the piped script from stdin. The script now runs
   inside a function, so it is read completely before anything executes.
