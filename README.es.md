@@ -80,7 +80,8 @@ sudo apt remove panel-ddev
 - **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los
   scripts de tu `package.json` y tus propios comandos guardados por proyecto.
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,
-  Mailpit, importar/exportar la base de datos.
+  Mailpit, importar/exportar la base de datos y **copias** (guardar y restaurar
+  copias completas de la base de datos).
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,
   historial, commit (Ctrl+Enter), ramas, fetch, pull y push.
 - **Preferencias**: español o inglés, tema claro, oscuro o el del sistema.

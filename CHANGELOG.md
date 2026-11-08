@@ -4,6 +4,13 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.7.0] - 2026-11-07
+
+### Added
+- **Database snapshots** (Tools → Snapshots…): create named snapshots of the
+  project database, see their date, size and database version, restore one
+  (with confirmation) or delete it. Uses `ddev snapshot`.
+
 ## [0.6.0] - 2026-11-07
 
 ### Added

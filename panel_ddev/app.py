@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands  # noqa: E402
+from . import commands, snapshots  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -353,6 +353,7 @@ class MainWindow(Gtk.ApplicationWindow):
             ("mail-unread-symbolic", "Mailpit", _("See the emails your app sends"), lambda: self.open_uri(p.get("mailpit_https_url", "")), running),
             ("document-open-symbolic", _("Import DB…"), _("Import a .sql or .sql.gz file"), self.on_import_db, running and not busy),
             ("document-save-symbolic", _("Export DB…"), _("Save the database to a file"), self.on_export_db, running and not busy),
+            ("document-revert-symbolic", _("Snapshots…"), _("Save and restore copies of the database"), self.on_snapshots, running and not busy),
             ("package-x-generic-symbolic", "composer install", None, lambda: self.quick("composer install", "ddev composer install"), running and not busy),
             ("package-x-generic-symbolic", "npm install", None, lambda: self.quick("npm install", "ddev npm install"), running and not busy),
         ]
@@ -634,6 +635,28 @@ class MainWindow(Gtk.ApplicationWindow):
         if path:
             script = ddev.script_simple(p["approot"], [(_("Exporting database"), f"ddev export-db --file={ddev._q(path)}")], _("Saved to {path}").format(path=path))
             self.run_script(f"{p['name']}: {_('export DB')}", script, p)
+
+    def on_snapshots(self):
+        p = self.selected
+        dlg = snapshots.SnapshotsDialog(self, p)
+        dlg.run()
+        action = dlg.action
+        dlg.destroy()
+        if not action:
+            return
+        kind, name = action
+        if kind == "restore" and not self.confirm(
+            _("Restore snapshot {name}?").format(name=name),
+            _("The current database of {project} is replaced with this snapshot.").format(project=p["name"]),
+            _("Restore"), destructive=True,
+        ):
+            return
+        if kind == "delete" and not self.confirm(
+            _("Delete snapshot {name}?").format(name=name), _("This cannot be undone."), _("Delete"), destructive=True,
+        ):
+            return
+        script = {"create": snapshots.script_create, "restore": snapshots.script_restore, "delete": snapshots.script_delete}[kind](p, name)
+        self.run_script(f"{p['name']}: snapshot", script, p)
 
     def on_delete(self):
         p = self.selected
