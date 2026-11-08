@@ -12,6 +12,7 @@ from pathlib import Path
 
 import yaml
 
+from . import nodeproj
 from .i18n import _
 
 HOME = Path.home()
@@ -28,8 +29,11 @@ PROJECT_TYPES = [
     ("cakephp", "CakePHP", "webroot"),
     ("craftcms", "Craft CMS", "web"),
     ("magento2", "Magento 2", "pub"),
+    ("node", "Node.js (Express, Vite, monorepo…)", ""),
     ("generic", "Generic (no PHP)", ""),
 ]
+SCHEMES = [("https", "HTTPS (recommended)"), ("http", "HTTP")]
+PACKAGE_ROOT = Path(__file__).resolve().parent.parent  # folder that contains the stackyard package
 AUTO_TYPE = ("", "Detect automatically", "")
 
 # Command that creates a brand-new project of each type
@@ -126,7 +130,7 @@ def read_config(approot):
         pass
     db = cfg.get("database") or {}
     return {
-        "cfg_type": cfg.get("type", ""),
+        "cfg_type": "node" if (Path(approot) / ".ddev" / "config.stackyard.yaml").exists() else cfg.get("type", ""),
         "cfg_docroot": cfg.get("docroot", ""),
         "cfg_php": str(cfg.get("php_version", "")),
         "cfg_node": str(cfg.get("nodejs_version", "")),
@@ -193,6 +197,8 @@ _DETECT = [
 def detect_type(path):
     """Best guess of (project type, docroot) from the files in `path`."""
     root = Path(path)
+    if nodeproj.is_node_project(root):
+        return "node", ""
     for markers, kind, docroot in _DETECT:
         if all((root / m).exists() for m in markers):
             return kind, docroot
@@ -236,6 +242,38 @@ def _ok(text):
     return f"ok {_q(text)}"
 
 
+def _node_cli():
+    return f"PYTHONPATH={_q(PACKAGE_ROOT)} python3 -m stackyard.nodeproj"
+
+
+def project_url(name, scheme="https", tld=None):
+    return f"{scheme}://{name}.{tld or project_tld()}"
+
+
+def _configure_lines(o, include_name=True):
+    """`ddev config` for the chosen type. Node projects (chosen, or detected
+    when the type is automatic) get the generated multi-service setup; the
+    Node version picked in the dialog wins over the detected one."""
+    cli = _node_cli()
+    name_flag = f"--project-name={_q(o['name'])} " if include_name and o.get("name") else ""
+    node_config = f'ddev config {name_flag}$({cli} flags "$PWD") --nodejs-version={_q(o["node"])}'
+    node_apply = f'{cli} apply "$PWD" {_q(o["name"])} {_q(project_tld())} {_q(o.get("scheme", "https"))}'
+    if o.get("type") == "node":
+        return [_step(_("Configuring DDEV for Node (backend and frontend as services)")), node_config, node_apply]
+    if o.get("type"):
+        return [_step(_("Configuring DDEV")), f"ddev config {_config_flags(o, include_name)}"]
+    return [
+        f'if {cli} detect "$PWD"; then',
+        "  " + _step(_("Node project detected: configuring backend and frontend as services")),
+        "  " + node_config,
+        "  " + node_apply,
+        "else",
+        "  " + _step(_("Configuring DDEV")),
+        f"  ddev config {_config_flags(o, include_name)}",
+        "fi",
+    ]
+
+
 def _config_flags(o, include_name=True):
     flags = []
     if include_name and o.get("name"):
@@ -269,8 +307,7 @@ def script_create(o):
         s.append(_step(_("Creating folder {path}").format(path=path)))
         s.append(f"mkdir -p {_q(path)} && cd {_q(path)}")
 
-    s.append(_step(_("Configuring DDEV")))
-    s.append(f"ddev config {_config_flags(o)}")
+    s += _configure_lines(o)
 
     if o["mode"] == "new":
         scaffold = SCAFFOLD.get(o.get("type")) if o.get("scaffold") else None
@@ -303,15 +340,22 @@ def script_create(o):
             "if [ -f artisan ] && ! grep -q '^APP_KEY=.\\+' .env 2>/dev/null; then "
             f"{_step(_('Generating APP_KEY'))}; ddev artisan key:generate; fi"
         )
-        s.append(f"if [ -f package.json ]; then {_step('npm install')}; ddev npm install; fi")
+        # Node projects install their dependencies inside the container on start
+        s.append(f"if [ -f package.json ] && [ ! -f .ddev/config.stackyard.yaml ]; then {_step('npm install')}; ddev npm install; fi")
 
+    url = project_url(o["name"], o.get("scheme", "https"))
     if o.get("launch"):
-        s.append("ddev launch")
-    s.append(_ok(_("Project ready: {url}").format(url=f"https://{o['name']}.{project_tld()}")))
+        s.append(f"(xdg-open {_q(url)} >/dev/null 2>&1 &) || true")
+    s.append(_ok(_("Project ready: {url}").format(url=url)))
     return "\n".join(s) + "\n"
 
 
 def script_edit(approot, o, old_db):
+    if o.get("type") == "node":
+        s = [_header(), f"cd {_q(approot)}"]
+        s += _configure_lines(o, include_name=False)  # o["name"] is the DDEV project name
+        s += [_step(_("Restarting")), "ddev restart", _ok(_("Configuration applied"))]
+        return "\n".join(s) + "\n"
     s = [_header(), f"cd {_q(approot)}"]
     db_changed = o.get("db") and o["db"] != old_db
     opts = dict(o)

@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, notify, resources, share, snapshots, updates, vite  # noqa: E402
+from . import commands, envedit, nodeproj, notify, resources, share, snapshots, updates, vite  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .editor import EditorView  # noqa: E402
 from .git import GitView  # noqa: E402
@@ -54,6 +54,17 @@ def icon_button(icon, label, tooltip=None, cb=None):
     return btn
 
 
+def project_url(p):
+    """Main URL of a project with the protocol chosen for it (HTTPS by default)."""
+    scheme = settings.project_pref(p.get("name"), "scheme", "https")
+    if p.get("cfg_type") == "node":
+        # the primary service (usually the frontend) is always on 443/80
+        return ddev.project_url(p["name"], scheme)
+    if scheme == "http":
+        return p.get("httpurl") or (p.get("primary_url") or "").replace("https://", "http://")
+    return p.get("primary_url") or p.get("httpsurl", "")
+
+
 class ProjectRow(Gtk.ListBoxRow):
     def __init__(self, project):
         super().__init__()
@@ -67,7 +78,7 @@ class ProjectRow(Gtk.ListBoxRow):
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         name = Gtk.Label(xalign=0)
         name.set_markup(f"<b>{GLib.markup_escape_text(project['name'])}</b>")
-        url = Gtk.Label(label=project.get("primary_url", ""), xalign=0, ellipsize=3)
+        url = Gtk.Label(label=project_url(project), xalign=0, ellipsize=3)
         url.get_style_context().add_class("dim-label")
         texts.pack_start(name, False, False, 0)
         texts.pack_start(url, False, False, 0)
@@ -317,6 +328,10 @@ class MainWindow(Gtk.ApplicationWindow):
             self._tray_sig = sig
             tray.update(self.projects)
 
+    @staticmethod
+    def project_url(p):
+        return project_url(p)
+
     def select_project(self, name):
         for row in self.listbox.get_children():
             if row.project["name"] == name:
@@ -388,7 +403,7 @@ class MainWindow(Gtk.ApplicationWindow):
         stack.add_titled(editor, "code", _("Code"))
         self.detail.pack_start(stack, True, True, 0)
 
-        url = p.get("primary_url") or p.get("httpsurl", "")
+        url = project_url(p)
         link = Gtk.LinkButton.new_with_label(url, url)
         link.set_halign(Gtk.Align.START)
         link.set_sensitive(running)
@@ -417,16 +432,26 @@ class MainWindow(Gtk.ApplicationWindow):
         # configuration
         frame = Gtk.Frame(label=" " + _("Configuration") + " ")
         grid = Gtk.Grid(column_spacing=24, row_spacing=6, margin=12)
+        scheme = settings.project_pref(p["name"], "scheme", "https")
         rows = [
             (_("Folder"), p.get("shortroot") or p.get("approot")),
             (_("Type"), ddev.label_for(ddev.PROJECT_TYPES, p.get("cfg_type") or p.get("type"))),
-            (_("Public folder"), p.get("cfg_docroot") or _("(root)")),
-            ("PHP", p.get("cfg_php") or "—"),
-            ("Node", p.get("cfg_node") or p.get("nodejs_version") or "—"),
-            (_("Web server"), ddev.label_for(ddev.WEBSERVERS, p.get("cfg_webserver"))),
-            (_("Database"), ddev.label_for(ddev.DATABASES, p.get("cfg_db"))),
-            (_("Resources"), "—"),
         ]
+        plan = nodeproj.analyze(p["approot"], scheme) if p.get("cfg_type") == "node" else None
+        if plan:
+            for svc in plan["services"]:
+                rows.append((svc["name"], f"{nodeproj.svc_url(p['name'], ddev.project_tld(), svc, scheme)}  ({svc['dir']})"))
+            rows.append(("Node", p.get("cfg_node") or plan["node"]))
+            rows.append((_("Database"), ddev.label_for(ddev.DATABASES, plan["database"]) if plan["database"] else _("None")))
+        else:
+            rows += [
+                (_("Public folder"), p.get("cfg_docroot") or _("(root)")),
+                ("PHP", p.get("cfg_php") or "—"),
+                ("Node", p.get("cfg_node") or p.get("nodejs_version") or "—"),
+                (_("Web server"), ddev.label_for(ddev.WEBSERVERS, p.get("cfg_webserver"))),
+                (_("Database"), ddev.label_for(ddev.DATABASES, p.get("cfg_db"))),
+            ]
+        rows += [(_("Protocol"), scheme.upper()), (_("Resources"), "—")]
         for i, (k, v) in enumerate(rows):
             kl = Gtk.Label(label=k, xalign=0)
             kl.get_style_context().add_class("dim-label")
@@ -436,6 +461,8 @@ class MainWindow(Gtk.ApplicationWindow):
             if k == _("Resources"):
                 self._res_label = value
         GLib.idle_add(self._update_usage)
+        php_project = not plan  # Node projects have no PHP (no Xdebug, Composer…)
+        has_db = php_project or bool(plan["database"])
         xl = Gtk.Label(label="Xdebug", xalign=0)
         xl.get_style_context().add_class("dim-label")
         grid.attach(xl, 0, len(rows), 1, 1)
@@ -444,6 +471,9 @@ class MainWindow(Gtk.ApplicationWindow):
         grid.attach(xdebug, 1, len(rows), 1, 1)
         if running and not busy:
             self._load_xdebug(p, xdebug)
+        if not php_project:
+            xl.set_no_show_all(True)
+            xdebug.set_no_show_all(True)
         edit = icon_button("emblem-system-symbolic", _("Change settings…"), cb=self.on_edit)
         edit.set_sensitive(not busy)
         edit.set_halign(Gtk.Align.START)
@@ -467,9 +497,17 @@ class MainWindow(Gtk.ApplicationWindow):
             ("document-revert-symbolic", _("Snapshots…"), _("Save and restore copies of the database"), self.on_snapshots, running and not busy),
             ("document-properties-symbolic", _("Edit .env…"), _("Edit the project's environment variables"), self.on_env, not busy),
             ("emblem-shared-symbolic", _("Share…"), _("Get a temporary public link to show your site"), self.on_share, running and not busy),
+            *([("applications-engineering-symbolic", _("Set up for Node…"), _("Detect backend and frontend and configure them as DDEV services"), self.on_node_setup, not busy)]
+              if p.get("cfg_type") == "node" or nodeproj.is_node_project(p["approot"]) else []),
             ("package-x-generic-symbolic", "composer install", None, lambda: self.quick("composer install", "ddev composer install"), running and not busy),
-            ("package-x-generic-symbolic", "npm install", None, lambda: self.quick("npm install", "ddev npm install"), running and not busy),
+            ("package-x-generic-symbolic", "npm install", _("Install the dependencies of every service") if plan else None,
+             (lambda: self.quick("npm install", "ddev exec bash /var/www/html/.ddev/stackyard-node-prepare.sh --force")) if plan
+             else (lambda: self.quick("npm install", "ddev npm install")), running and not busy),
         ]
+        db_tools = {"phpMyAdmin", _("Import DB…"), _("Export DB…"), _("Snapshots…")}
+        has_composer = (Path(p["approot"]) / "composer.json").exists()
+        items = [i for i in items
+                 if (has_db or i[1] not in db_tools) and (has_composer or i[1] != "composer install")]
         for icon, label, tip, cb, sensitive in items:
             b = icon_button(icon, label, tip, cb)
             b.set_sensitive(sensitive)
@@ -757,24 +795,29 @@ class MainWindow(Gtk.ApplicationWindow):
         o = self._project_dialog("new")
         if o:
             self._pending_select = o["name"]
+            settings.set_project_pref(o["name"], "scheme", o["scheme"])
             self.run_script(f"{o['name']}: {_('create')}", ddev.script_create(o), {"name": o["name"]})
 
     def on_clone(self):
         o = self._project_dialog("clone")
         if o:
             self._pending_select = o["name"]
+            settings.set_project_pref(o["name"], "scheme", o["scheme"])
             self.run_script(f"{o['name']}: {_('clone')}", ddev.script_create(o), {"name": o["name"]})
 
     def on_add_existing(self):
         o = self._project_dialog("existing")
         if o:
             self._pending_select = o["name"]
+            settings.set_project_pref(o["name"], "scheme", o["scheme"])
             self.run_script(f"{o['name']}: {_('add')}", ddev.script_create(o), {"name": o["name"]})
 
     def on_edit(self):
         p = self.selected
         o = self._project_dialog("edit", p)
         if o:
+            o["name"] = p["name"]
+            settings.set_project_pref(p["name"], "scheme", o["scheme"])
             self.run_script(f"{p['name']}: {_('configure')}", ddev.script_edit(p["approot"], o, p.get("cfg_db", "")), p)
 
     def on_ssh(self):
@@ -870,6 +913,19 @@ class MainWindow(Gtk.ApplicationWindow):
                 share.ShareDialog(self, p["name"], url)
 
         term.connect("contents-changed", on_contents)
+
+    def on_node_setup(self):
+        p = self.selected
+        scheme = settings.project_pref(p["name"], "scheme", "https")
+        if not self.confirm(
+            _("Set up {name} for Node?").format(name=p["name"]),
+            _("Stackyard detects the backend and frontend, runs them as DDEV services, creates the missing .env "
+              "files and installs the dependencies inside the container. Your code is not modified. The project restarts."),
+            _("Set up"),
+        ):
+            return
+        o = {"name": p["name"], "type": "node", "node": p.get("cfg_node") or "24", "scheme": scheme}
+        self.run_script(f"{p['name']}: Node", ddev.script_edit(p["approot"], o, p.get("cfg_db", "")), p)
 
     def on_env(self):
         p = self.selected

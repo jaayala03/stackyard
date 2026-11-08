@@ -96,7 +96,7 @@ class Tray:
             sub = Gtk.Menu()
             top = Gtk.MenuItem(label=f"{mark}  {p['name']}")
             top.set_submenu(sub)
-            url = p.get("primary_url") or p.get("httpsurl", "")
+            url = w.project_url(p)
             self._item(sub, _("Open in browser"), lambda u=url: w.open_uri(u), running)
             if running:
                 self._item(sub, _("Stop"), lambda pp=p: w.project_action(pp, "stop"), not busy)

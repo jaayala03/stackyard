@@ -89,11 +89,19 @@ sudo apt remove stackyard
 - **Clone with git**: paste a URL or pick one of **your GitHub repositories** (search included); choose the branch; configures DDEV, starts the project and
   installs dependencies (`composer install`, `npm install`, `.env` and
   `APP_KEY` for Laravel).
+- **Node.js projects** (Express, Fastify, Koa… backends and Vite frontends, also
+  monorepos with `backend/` and `frontend/`): detected automatically and run as
+  DDEV services with their own URLs, dependencies installed (and native modules
+  rebuilt) inside the container, `.env` files created with the DDEV URLs and
+  generated secrets, Vite allowed on the local domain with hot reload, Chromium
+  for Puppeteer. No Node needed on your computer.
+- **HTTP or HTTPS** per project.
 - **Add folder**: use code you already have; the framework and public folder
   are detected automatically.
 - **Xdebug** on/off with a switch.
 - **Share** a project with a temporary public link (Cloudflare quick tunnel).
-- **.env editor** with highlighting, backup and "create from .env.example".
+- **.env editor** for every `.env` of the project (also in sub-folders), with
+  highlighting, backup and "create from .env.example".
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
 - **Vite**: one click to make `npm run dev` and hot reload work through DDEV.
 - **Quick commands**: framework shortcuts (artisan, wp-cli, drush…), your
@@ -137,6 +145,7 @@ run, and if something asks for a password you type it right there.
 | `stackyard/share.py` | Share a project (ddev share) |
 | `stackyard/envedit.py` | .env editor |
 | `stackyard/snapshots.py` | Database snapshots dialog |
+| `stackyard/nodeproj.py` | Node.js project detection and DDEV services setup |
 | `stackyard/vite.py` | Vite dev server setup for DDEV |
 | `stackyard/commands.py` | Quick commands per framework, npm scripts and saved commands |
 | `stackyard/github.py` | GitHub repository picker (uses `gh`) |

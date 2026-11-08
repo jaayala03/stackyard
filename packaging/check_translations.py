@@ -18,7 +18,7 @@ for f in (ROOT / "stackyard").glob("*.py"):
                 and n.args and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str)):
             found.add(n.args[0].value)
 # strings translated indirectly through constants
-found |= {"Generic (no PHP)", ddev.AUTO_TYPE[1]}  # the other type labels are brand names
+found |= {"Generic (no PHP)", "Node.js (Express, Vite, monorepo…)", ddev.AUTO_TYPE[1]} | {label for _v, label in ddev.SCHEMES}  # the other type labels are brand names
 found |= set(STATUS_LABELS.values()) | {d for _l, d, _c in git.STATUS_INFO.values()}
 found |= {label for _v, label in settings.THEMES} | {"System default"} | {label for _v, label in notify.MODES} | {label for _v, label in resources.IDLE_OPTIONS}
 found |= set(ProjectDialog.TITLES.values()) | set(ProjectDialog.OK.values())

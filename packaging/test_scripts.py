@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from stackyard import ddev, i18n, resources, updates  # noqa: E402
+from stackyard import ddev, i18n, nodeproj, resources, updates  # noqa: E402
 from stackyard.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
@@ -71,6 +71,38 @@ def main():
         failures.append("update install script: bash -n failed")
     if not (updates.is_newer("1.10.0", "1.9.9") and not updates.is_newer("1.2.0", "1.2.0")):
         failures.append("updates.is_newer is wrong")
+
+    # Node monorepo: backend (Express) + frontend (Vite) are detected and configured
+    for scheme in ("https", "http"):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "backend/src").mkdir(parents=True)
+            (root / "frontend").mkdir()
+            (root / "package.json").write_text('{"scripts": {"dev": "concurrently \\"cd backend && npm run dev\\""}}')
+            (root / "backend/package.json").write_text('{"scripts": {"dev": "node src/server.js"}, "dependencies": {"express": "4", "bcrypt": "5"}}')
+            (root / "backend/src/server.js").write_text("const PORT = process.env.PORT || 3001; const s = process.env.JWT_SECRET;")
+            (root / "backend/.env.example").write_text("PORT=3001\nFRONTEND_URL=http://localhost:5173\nGEMINI_API_KEY=your-key-here\n")
+            (root / "frontend/package.json").write_text('{"scripts": {"dev": "vite"}, "devDependencies": {"vite": "6"}}')
+            (root / "frontend/vite.config.js").write_text("export default { server: { port: 5173 } }")
+            (root / "frontend/.env.development").write_text("\ufeffVITE_API_URL=http://localhost:3001/api\n")
+            plan = nodeproj.analyze(root, scheme)
+            report = nodeproj.apply(plan, "demo", "local")
+            env = (root / "backend/.env").read_text()
+            front = (root / "frontend/.env.development.local").read_text()
+            base = f"{scheme}://demo.local"
+            checks = {
+                "two services": [s["kind"] for s in plan["services"]] == ["server", "vite"],
+                "frontend is primary": plan["services"][1]["public_port"] == (443 if scheme == "https" else 80),
+                "backend keeps its port": plan["services"][0]["public_port"] == 3001,
+                "no database": plan["database"] is None and "--omit-containers=db" in nodeproj.ddev_config_flags(plan),
+                "env urls": f"FRONTEND_URL={base}\n" in env,
+                "jwt generated": "JWT_SECRET=" in env,
+                "api key reported": any("GEMINI_API_KEY" in line for line in report),
+                "vite api url": f"VITE_API_URL={base}:3001/api" in front,
+                "prepare script": bash(nodeproj.prepare_script(plan), "-n").returncode == 0,
+                "hmr": (("wss" if scheme == "https" else "'ws'") in (root / ".ddev/vite.frontend.ddev.config.mjs").read_text()),
+            }
+            failures += [f"node [{scheme}]: {k}" for k, ok in checks.items() if not ok]
 
     # idle tracker: quiet for 30 min -> idle; traffic or CPU resets the timer
     t = resources.IdleTracker()

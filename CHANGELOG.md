@@ -4,6 +4,42 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [1.4.0] - 2026-11-08
+
+### Added
+- **Node.js projects**: Express, Fastify, Koa, NestJS… backends and Vite
+  frontends, including monorepos with `backend/` and `frontend/` folders, are
+  detected when you clone or add them (or choose the new "Node.js" type), and
+  set up without Node on your computer:
+  - every part runs as a DDEV service with its own URL (the frontend on the main
+    URL, the backend on its own port), without a PHP web server or database
+    unless the code uses MySQL/MariaDB or PostgreSQL;
+  - dependencies are installed inside the container on start; native modules
+    (bcrypt, sqlite3, sharp…) are rebuilt for Linux when `node_modules` came
+    from another system, and checked one by one because npm 11 skips install
+    scripts that are not allowed explicitly;
+  - `.env` files are created from `.env.example` with the DDEV URLs, secrets such
+    as `JWT_SECRET` are generated, and the keys that need a real value (API
+    keys, tokens) are listed;
+  - Vite runs through a wrapper config that allows the local domain and makes
+    hot reload work, without touching the project's `vite.config`;
+  - Chromium is installed for Puppeteer when the project uses it;
+  - Tools → "Set up for Node…" applies or refreshes all of this on an existing
+    project; "npm install" installs every service.
+- **HTTP or HTTPS** per project (new, clone, add folder and settings): used for
+  the URL the app shows and opens and, in Node projects, for the `.env` URLs and
+  Vite's hot reload.
+- The **.env editor** finds `.env` files in sub-folders (e.g. `backend/.env`,
+  `frontend/.env.development`) and creates any of them from its example file.
+
+### Changed
+- Node projects hide the PHP-only tools (Xdebug, Composer) and the database
+  tools when there is no database.
+
+### Fixed
+- `.env` files that start with a UTF-8 BOM (saved by some Windows editors) are
+  read correctly.
+
 ## [1.3.1] - 2026-11-08
 
 ### Fixed

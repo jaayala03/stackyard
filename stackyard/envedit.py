@@ -14,17 +14,43 @@ from gi.repository import Gdk, Gtk, Pango  # noqa: E402
 from .i18n import _  # noqa: E402
 
 ENV_GLOB = ".env*"
+SKIP_DIRS = {"node_modules", ".git", ".ddev", "vendor", "dist", "build", ".next", ".nuxt", "storage", "coverage"}
+MAX_DEPTH = 3
+EXAMPLE_SUFFIXES = (".example", ".sample", ".dist", ".template")
 LINE_RE = re.compile(r"^(\s*)(export\s+)?([A-Za-z_][A-Za-z0-9_.]*)(\s*=)(.*)$")
 
 
 def env_files(approot):
-    """The .env-style files in the project root, `.env` first."""
+    """Every .env-style file of the project (root and sub-folders such as
+    backend/ or frontend/), as paths relative to the root. Root files come
+    first and `.env` leads each folder."""
     root = Path(approot)
-    files = sorted(p.name for p in root.glob(ENV_GLOB) if p.is_file() and not p.name.endswith((".bak", ".swp")))
-    if ".env" in files:
-        files.remove(".env")
-        files.insert(0, ".env")
-    return files
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        depth = len(Path(dirpath).relative_to(root).parts)
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")) if depth < MAX_DEPTH else []
+        for f in filenames:
+            if f.startswith(".env") and not f.endswith((".bak", ".swp", ".tmp")):
+                found.append(str((Path(dirpath) / f).relative_to(root)))
+
+    def key(rel):
+        parts = Path(rel).parts
+        return (len(parts) > 1, str(Path(rel).parent), Path(rel).name != ".env", Path(rel).name)
+    return sorted(found, key=key)
+
+
+def creatable(approot):
+    """(example, target) pairs: example files whose real file does not exist,
+    e.g. backend/.env.example -> backend/.env."""
+    pairs = []
+    for rel in env_files(approot):
+        name = Path(rel).name
+        for suffix in EXAMPLE_SUFFIXES:
+            if name.endswith(suffix):
+                target = str(Path(rel).with_name(name[: -len(suffix)]))
+                if not (Path(approot) / target).exists():
+                    pairs.append((rel, target))
+    return pairs
 
 
 def save_file(path, text):
@@ -64,8 +90,8 @@ class EnvDialog(Gtk.Dialog):
         self.files = Gtk.ComboBoxText()
         self.files.connect("changed", self._on_file_changed)
         top.pack_start(self.files, False, False, 0)
-        self.create_btn = Gtk.Button(label=_("Create .env from .env.example"))
-        self.create_btn.connect("clicked", self._create_from_example)
+        self.create_btn = Gtk.MenuButton(label=_("Create from example…"))
+        self.create_btn.set_tooltip_text(_("Create a .env file from its .env.example"))
         top.pack_start(self.create_btn, False, False, 0)
         box.pack_start(top, False, False, 0)
 
@@ -92,7 +118,7 @@ class EnvDialog(Gtk.Dialog):
         self.current = None
         self._reload_files()
         self.show_all()
-        self.create_btn.set_visible(".env" not in env_files(self.root) and (self.root / ".env.example").exists())
+        self._update_create_menu()
 
     # ------------------------------------------------------------ files
     def _reload_files(self, select=None):
@@ -100,8 +126,7 @@ class EnvDialog(Gtk.Dialog):
         self.files.remove_all()
         for n in names:
             self.files.append(n, n)
-        has_env = ".env" in names
-        self.create_btn.set_visible(not has_env and (self.root / ".env.example").exists())
+        self._update_create_menu()
         if names:
             self.files.set_active_id(select or names[0])
         else:
@@ -111,11 +136,11 @@ class EnvDialog(Gtk.Dialog):
 
     def _on_file_changed(self, combo):
         name = combo.get_active_id()
-        if not name or (getattr(self, "current", None) and self.current.name == name):
+        if not name or (getattr(self, "current", None) and self.current == self.root / name):
             return
         if self._dirty and not self._confirm_discard():
             combo.handler_block_by_func(self._on_file_changed)
-            combo.set_active_id(self.current.name)  # stay on the edited file
+            combo.set_active_id(str(self.current.relative_to(self.root)))  # stay on the edited file
             combo.handler_unblock_by_func(self._on_file_changed)
             return
         self.current = self.root / name
@@ -125,10 +150,23 @@ class EnvDialog(Gtk.Dialog):
             self._set_text(f"# {exc}\n")
         self._dirty = False
 
-    def _create_from_example(self, _btn):
-        shutil.copy2(self.root / ".env.example", self.root / ".env")
+    def _update_create_menu(self):
+        pairs = creatable(self.root)
+        menu = Gtk.Menu()
+        for example, target in pairs:
+            item = Gtk.MenuItem(label=f"{target}  ←  {Path(example).name}")
+            item.connect("activate", lambda _i, e=example, t=target: self._create_from_example(e, t))
+            menu.append(item)
+        menu.show_all()
+        self.create_btn.set_popup(menu)
+        self.create_btn.set_visible(bool(pairs))
+
+    def _create_from_example(self, example, target):
+        if self._dirty and not self._confirm_discard():
+            return
+        shutil.copy2(self.root / example, self.root / target)
         self._dirty = False
-        self._reload_files(".env")
+        self._reload_files(target)
 
     def _confirm_discard(self):
         dlg = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
@@ -183,5 +221,5 @@ class EnvDialog(Gtk.Dialog):
         except OSError as exc:
             return str(exc)
         self.saved = True
-        self.clear_cache = self.is_laravel and self.cache_check.get_active() and self.current.name == ".env"
+        self.clear_cache = self.is_laravel and self.cache_check.get_active() and self.current == self.root / ".env"
         return None

@@ -87,11 +87,19 @@ sudo apt remove stackyard
   datos. Puede descargar el framework automáticamente.
 - **Clonar con git**: pega una URL o elige uno de **tus repositorios de GitHub** (con buscador); elige la rama; configura DDEV, arranca e instala dependencias
   (`composer install`, `npm install`, `.env` y `APP_KEY` en Laravel).
+- **Proyectos Node.js** (backends Express, Fastify, Koa… y frontends Vite, también
+  monorepos con `backend/` y `frontend/`): se detectan solos y se ejecutan como
+  servicios de DDEV con su propia URL, dependencias instaladas (y módulos nativos
+  recompilados) dentro del contenedor, `.env` creados con las URLs de DDEV y
+  secretos generados, Vite aceptando el dominio local con recarga en caliente y
+  Chromium para Puppeteer. No necesitas Node en tu equipo.
+- **HTTP o HTTPS** por proyecto.
 - **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
   carpeta pública automáticamente.
 - **Xdebug**: actívalo o desactívalo con un interruptor.
 - **Compartir** un proyecto con un enlace público temporal (túnel de Cloudflare).
-- **Editor de .env** con colores, copia de seguridad y «crear desde .env.example».
+- **Editor de .env** para todos los `.env` del proyecto (también en subcarpetas),
+  con colores, copia de seguridad y «crear desde .env.example».
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Vite**: un clic para que `npm run dev` y la recarga en caliente funcionen con DDEV.
 - **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los

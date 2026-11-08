@@ -143,6 +143,10 @@ class ProjectDialog(Gtk.Dialog):
         if self.old_db and self.old_db not in [d[0] for d in db_opts]:
             db_opts.insert(0, (self.old_db, self.old_db))
         self.db = combo(db_opts, self.old_db or ddev.DEFAULTS["db"], False)
+        current_scheme = settings.project_pref(p.get("name"), "scheme", "https") if p.get("name") else "https"
+        self.scheme = combo(ddev.SCHEMES, current_scheme)
+        self.scheme.connect("changed", lambda *_a: self._validate())
+        self._add(_("Protocol"), self.scheme, _("HTTPS uses the local certificates (mkcert). Choose HTTP if your app or browser has trouble with them."))
         self._add(
             _("Database"),
             self.db,
@@ -251,7 +255,10 @@ class ProjectDialog(Gtk.Dialog):
             default = next((d for v, _l, d in ddev.PROJECT_TYPES if v == t), "")
             self.docroot.set_text(default)  # fires "changed"…
             self._docroot_touched = False  # …but it is not a user edit
-        self.docroot.set_sensitive(t != "")
+        self.docroot.set_sensitive(t not in ("", "node"))
+        # Node projects: services, ports and database are detected from the code
+        for w in (self.php, self.webserver, self.db):
+            w.set_sensitive(t != "node")
         if self.mode == "new":
             framework = ddev.label_for(ddev.PROJECT_TYPES, t)
             self.scaffold.set_label(
@@ -259,7 +266,7 @@ class ProjectDialog(Gtk.Dialog):
                 if ddev.SCAFFOLD.get(t) else _("Create a test index.php")
             )
             self.scaffold.set_active(True)
-            self.scaffold.set_visible(t != "generic")
+            self.scaffold.set_visible(t not in ("generic", "node"))
         self._validate()
 
     # ------------------------------------------------------------ validation
@@ -285,7 +292,7 @@ class ProjectDialog(Gtk.Dialog):
             elif self.mode != "existing" and target.exists() and any(target.iterdir()):
                 msg = _("The folder {path} already exists and is not empty.").format(path=target)
             if name and ddev.NAME_RE.match(name):
-                self.summary.set_text(f"{target}\nhttps://{name}.{ddev.project_tld()}")
+                self.summary.set_text(f"{target}\n{ddev.project_url(name, self.scheme.get_active_id() or 'https')}")
             else:
                 self.summary.set_text("")
         self.error.set_markup(f'<span foreground="#e01b24">{msg}</span>' if msg else "")
@@ -301,6 +308,7 @@ class ProjectDialog(Gtk.Dialog):
             "node": self.node.get_active_id(),
             "webserver": self.webserver.get_active_id(),
             "db": self.db.get_active_id(),
+            "scheme": self.scheme.get_active_id() or "https",
         }
         if self.mode != "edit":
             o.update(

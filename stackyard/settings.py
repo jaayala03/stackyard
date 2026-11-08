@@ -39,6 +39,16 @@ def save(values):
     os.replace(tmp, CONFIG_FILE)
 
 
+def project_pref(project, key, default=None):
+    return load().get("projects", {}).get(project, {}).get(key, default)
+
+
+def set_project_pref(project, key, value):
+    values = load()
+    values.setdefault("projects", {}).setdefault(project, {})[key] = value
+    save(values)
+
+
 # --------------------------------------------------------------------- theme
 _THEME_DIRS = [
     Path.home() / ".themes",
