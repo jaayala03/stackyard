@@ -11,6 +11,7 @@ from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import ddev  # noqa: E402
 from .dialogs import ProjectDialog  # noqa: E402
+from .git import GitView  # noqa: E402
 from .terminal import TerminalTabs  # noqa: E402
 
 APP_ID = "local.panel.ddev"
@@ -102,13 +103,12 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # ---------------- detalle
         self.detail = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=18)
-        detail_scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
-        detail_scroll.add(self.detail)
-        self.detail_scroll = detail_scroll
+        self.git_views = {}
+        self.current_page = "proyecto"
 
         top = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         top.pack1(list_scroll, False, False)
-        top.pack2(detail_scroll, True, False)
+        top.pack2(self.detail, True, False)
 
         # ---------------- terminal
         self.terms = TerminalTabs()
@@ -133,6 +133,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def _auto_refresh(self):
         if self.get_visible():
             self.refresh()
+            if self.current_page == "git" and self.selected:
+                view = self.git_views.get(self.selected["name"])
+                if view and view.get_mapped():
+                    view.refresh()
         return True
 
     def refresh(self):
@@ -189,6 +193,13 @@ class MainWindow(Gtk.ApplicationWindow):
         return lbl
 
     def render_detail(self):
+        # Las vistas Git se reutilizan (guardan el mensaje del commit y la selección):
+        # se separan antes de destruir la cabecera vieja para que no se destruyan con ella.
+        self._rebuilding = True  # al separar la vista Git, el Stack viejo cambia de página: ignorarlo
+        for view in self.git_views.values():
+            if view.get_parent():
+                view.get_parent().remove(view)
+        self._rebuilding = False
         for child in self.detail.get_children():
             self.detail.remove(child)
         p = self.selected
@@ -217,11 +228,24 @@ class MainWindow(Gtk.ApplicationWindow):
         head.pack_end(delete, False, False, 0)
         self.detail.pack_start(head, False, False, 0)
 
+        stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        switcher = Gtk.StackSwitcher()
+        head.pack_start(switcher, False, False, 12)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        body_scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
+        body_scroll.add(body)
+        stack.add_titled(body_scroll, "proyecto", "Proyecto")
+        gitview = self._git_view(p)
+        if gitview.get_parent():
+            gitview.get_parent().remove(gitview)
+        stack.add_titled(gitview, "git", "Git")
+        self.detail.pack_start(stack, True, True, 0)
+
         url = p.get("primary_url") or p.get("httpsurl", "")
         link = Gtk.LinkButton.new_with_label(url, url)
         link.set_halign(Gtk.Align.START)
         link.set_sensitive(running)
-        self.detail.pack_start(link, False, False, 0)
+        body.pack_start(link, False, False, 0)
 
         # acciones principales
         actions = Gtk.Box(spacing=8)
@@ -241,7 +265,7 @@ class MainWindow(Gtk.ApplicationWindow):
         actions.pack_start(_icon_button("folder-open-symbolic", "Carpeta", cb=lambda: self.open_uri(Path(p["approot"]).as_uri())), False, False, 0)
         if self.editor:
             actions.pack_start(_icon_button("accessories-text-editor-symbolic", "Editor", f"Abrir con {self.editor}", lambda: self.open_editor(p["approot"])), False, False, 0)
-        self.detail.pack_start(actions, False, False, 0)
+        body.pack_start(actions, False, False, 0)
 
         # configuración
         frame = Gtk.Frame(label=" Configuración ")
@@ -268,7 +292,7 @@ class MainWindow(Gtk.ApplicationWindow):
         frame.add(grid)
         columns = Gtk.Box(spacing=12, homogeneous=True)
         columns.pack_start(frame, True, True, 0)
-        self.detail.pack_start(columns, False, False, 0)
+        body.pack_start(columns, False, False, 0)
 
         # herramientas
         tools_frame = Gtk.Frame(label=" Herramientas ")
@@ -291,7 +315,28 @@ class MainWindow(Gtk.ApplicationWindow):
         columns.pack_start(tools_frame, True, True, 0)
 
         self.detail.show_all()
-        GLib.idle_add(lambda: self.detail_scroll.get_vadjustment().set_value(0))
+        stack.set_visible_child_name(self.current_page)
+        switcher.set_stack(stack)  # después de elegir página, para que el botón activo sea el correcto
+        stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
+
+    def _on_page_changed(self, stack, _pspec, gitview):
+        if getattr(self, "_rebuilding", False):
+            return
+        self.current_page = stack.get_visible_child_name()
+        if self.current_page == "git":
+            gitview.refresh()
+
+    def _git_view(self, p):
+        view = self.git_views.get(p["name"])
+        if view is None or view.approot != p["approot"]:
+            def run(title, script, on_done):
+                def done(code):
+                    self.refresh()
+                    on_done(code)
+                self.terms.run(title, script, on_done=done)
+            view = GitView(p["approot"], run, self)
+            self.git_views[p["name"]] = view
+        return view
 
     # ================================================================ utilidades
     def open_uri(self, uri):

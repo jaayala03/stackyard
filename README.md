@@ -14,6 +14,13 @@ al estilo de Laragon.
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin
   (lo instala si falta), Mailpit, importar/exportar la base de datos.
+- **Pestaña Git** (si el proyecto usa git; si no, botón para inicializarlo):
+  - Cambios con su estado (M, A, D, R, N) y casillas para prepararlos (`git add`).
+  - Diferencias de cada archivo con colores.
+  - Historial de commits; al elegir uno se ve qué cambió (`git show`).
+  - Mensaje + **Commit** (Ctrl+Enter). Si no hay nada preparado, ofrece incluir todo.
+  - Ramas: cambiar con el desplegable o crear una nueva.
+  - **Fetch, Pull y Push** (publica la rama con `-u` si aún no tiene remoto), con ↑/↓ commits pendientes.
 - **Apagar todo** (`ddev poweroff`) y **Eliminar** (borra contenedores y BD, no tus archivos).
 
 Cada acción se ejecuta en una pestaña de terminal integrada: ves exactamente qué
@@ -41,5 +48,6 @@ Docker, DDEV, `python3-gi`, `gir1.2-vte-2.91` y `python3-yaml` (vienen en Linux 
 | `panel_ddev/app.py` | Ventana principal |
 | `panel_ddev/dialogs.py` | Diálogo de nuevo / clonar / configurar |
 | `panel_ddev/terminal.py` | Pestañas de terminal integradas (VTE) |
+| `panel_ddev/git.py` | Pestaña Git: cambios, diferencias, historial, commit, pull y push |
 
 Valores por defecto (PHP 8.4, Node 24, Apache, MariaDB 11.8) en `DEFAULTS` de `ddev.py`.
