@@ -333,11 +333,19 @@ class MainWindow(Gtk.ApplicationWindow):
             kl.get_style_context().add_class("dim-label")
             grid.attach(kl, 0, i, 1, 1)
             grid.attach(Gtk.Label(label=str(v), xalign=0, selectable=True), 1, i, 1, 1)
+        xl = Gtk.Label(label="Xdebug", xalign=0)
+        xl.get_style_context().add_class("dim-label")
+        grid.attach(xl, 0, len(rows), 1, 1)
+        xdebug = Gtk.Switch(halign=Gtk.Align.START, sensitive=False)
+        xdebug.set_tooltip_text(_("Step debugging for PHP. It stays on until the project restarts."))
+        grid.attach(xdebug, 1, len(rows), 1, 1)
+        if running and not busy:
+            self._load_xdebug(p, xdebug)
         edit = icon_button("emblem-system-symbolic", _("Change settings…"), cb=self.on_edit)
         edit.set_sensitive(not busy)
         edit.set_halign(Gtk.Align.START)
         edit.set_margin_top(6)
-        grid.attach(edit, 0, len(rows), 2, 1)
+        grid.attach(edit, 0, len(rows) + 1, 2, 1)
         frame.add(grid)
         columns = Gtk.Box(spacing=12, homogeneous=True)
         columns.pack_start(frame, True, True, 0)
@@ -371,6 +379,27 @@ class MainWindow(Gtk.ApplicationWindow):
         stack.set_visible_child_name(self.current_page)
         switcher.set_stack(stack)  # after choosing the page so the right button is active
         stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
+
+    def _load_xdebug(self, p, switch):
+        def work():
+            state = ddev.xdebug_enabled(p["approot"])
+            GLib.idle_add(apply, state)
+
+        def apply(state):
+            if state is None or switch.get_parent() is None:  # unknown, or the detail was redrawn
+                return False
+            switch.set_active(state)
+            switch.set_sensitive(True)
+            switch.connect("notify::active", lambda sw, _ps: self._toggle_xdebug(p, sw.get_active()))
+            return False
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _toggle_xdebug(self, p, on):
+        title = _("Enabling Xdebug") if on else _("Disabling Xdebug")
+        done = _("Xdebug enabled") if on else _("Xdebug disabled")
+        script = ddev.script_simple(p["approot"], [(title, f"ddev xdebug {'on' if on else 'off'}")], done)
+        self.terms.run(f"{p['name']}: Xdebug", script, cwd=p["approot"])
 
     def _commands_frame(self, p, running):
         frame = Gtk.Frame(label=" " + _("Quick commands") + " ")

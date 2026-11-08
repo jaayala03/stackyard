@@ -143,6 +143,20 @@ def project_tld():
         return "ddev.site"
 
 
+def xdebug_enabled(approot):
+    """True/False, or None if the status could not be read (project stopped…)."""
+    try:
+        proc = subprocess.run(shell_argv("ddev xdebug status"), cwd=approot, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    out = proc.stdout.lower()
+    if "enabled" in out:
+        return True
+    if "disabled" in out:
+        return False
+    return None
+
+
 def has_phpmyadmin(approot):
     return (Path(approot) / ".ddev" / "docker-compose.phpmyadmin.yaml").exists()
 

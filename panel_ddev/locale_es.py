@@ -284,4 +284,9 @@ ES = {
     'The current database of {project} is replaced with this snapshot.': 'Se reemplaza la base de datos actual de {project} con esta copia.',
     'Delete snapshot {name}?': '¿Eliminar la copia {name}?',
     'This cannot be undone.': 'No se puede deshacer.',
+    'Step debugging for PHP. It stays on until the project restarts.': 'Depuración paso a paso de PHP. Se mantiene activo hasta que reinicies el proyecto.',
+    'Enabling Xdebug': 'Activando Xdebug',
+    'Disabling Xdebug': 'Desactivando Xdebug',
+    'Xdebug enabled': 'Xdebug activado',
+    'Xdebug disabled': 'Xdebug desactivado',
 }

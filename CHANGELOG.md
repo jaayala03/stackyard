@@ -4,6 +4,12 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.8.0] - 2026-11-07
+
+### Added
+- **Xdebug switch** in the project configuration: shows whether Xdebug is on
+  and toggles it (`ddev xdebug on/off`). It stays on until the project restarts.
+
 ## [0.7.0] - 2026-11-07
 
 ### Added

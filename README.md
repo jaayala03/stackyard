@@ -78,6 +78,7 @@ sudo apt remove panel-ddev
   `APP_KEY` for Laravel).
 - **Add folder**: use code you already have; the framework and public folder
   are detected automatically.
+- **Xdebug** on/off with a switch.
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
 - **Quick commands**: framework shortcuts (artisan, wp-cli, drush…), your
   `package.json` scripts and your own saved commands per project.

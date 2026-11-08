@@ -76,6 +76,7 @@ sudo apt remove panel-ddev
   (`composer install`, `npm install`, `.env` y `APP_KEY` en Laravel).
 - **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
   carpeta pública automáticamente.
+- **Xdebug**: actívalo o desactívalo con un interruptor.
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
 - **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los
   scripts de tu `package.json` y tus propios comandos guardados por proyecto.
