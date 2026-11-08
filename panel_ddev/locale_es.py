@@ -358,4 +358,13 @@ ES = {
     'CPU {cpu:.1f}% · RAM {mem}': 'CPU {cpu:.1f}% · RAM {mem}',
     '{name} stopped after {minutes} min without activity': '{name} se detuvo tras {minutes} min sin actividad',
     'Resources': 'Recursos',
+    'Set up Vite…': 'Configurar Vite…',
+    'Make the Vite dev server (npm run dev, hot reload) work through DDEV': 'Hacer que el servidor de Vite (npm run dev, recarga en caliente) funcione a través de DDEV',
+    'Set up Vite for DDEV?': '¿Configurar Vite para DDEV?',
+    'Port {port} is exposed in .ddev/config.vite.yaml and a server block is added to your vite.config (a copy is kept as .bak). Then the project restarts.': 'Se expone el puerto {port} en .ddev/config.vite.yaml y se añade un bloque server a tu vite.config (se guarda una copia .bak). Después el proyecto se reinicia.',
+    'Set up': 'Configurar',
+    'Could not set up Vite': 'No se pudo configurar Vite',
+    'Vite is ready: run “npm run dev” from Quick commands': 'Vite está listo: ejecuta «npm run dev» desde Comandos rápidos',
+    'Add this to your vite.config': 'Añade esto a tu vite.config',
+    'Your vite.config could not be changed automatically (it already has a server block or an unusual shape). Merge this inside defineConfig({ … }):': 'No se pudo cambiar tu vite.config automáticamente (ya tiene un bloque server o una forma poco habitual). Añade esto dentro de defineConfig({ … }):',
 }

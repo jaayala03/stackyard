@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, notify, resources, share, snapshots  # noqa: E402
+from . import commands, envedit, notify, resources, share, snapshots, vite  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -369,9 +369,9 @@ class MainWindow(Gtk.ApplicationWindow):
             (_("Public folder"), p.get("cfg_docroot") or _("(root)")),
             ("PHP", p.get("cfg_php") or "—"),
             ("Node", p.get("cfg_node") or p.get("nodejs_version") or "—"),
-            (_("Resources"), "—"),
             (_("Web server"), ddev.label_for(ddev.WEBSERVERS, p.get("cfg_webserver"))),
             (_("Database"), ddev.label_for(ddev.DATABASES, p.get("cfg_db"))),
+            (_("Resources"), "—"),
         ]
         for i, (k, v) in enumerate(rows):
             kl = Gtk.Label(label=k, xalign=0)
@@ -483,6 +483,11 @@ class MainWindow(Gtk.ApplicationWindow):
                 if saved:
                     b.connect("button-press-event", self._on_saved_command_click, p["name"], label)
                 flow.add(b)
+        vite_cfg, ddev_ready, vite_ready = vite.status(approot)
+        if vite_cfg and not (ddev_ready and vite_ready):
+            b = icon_button("emblem-system-symbolic", _("Set up Vite…"), _("Make the Vite dev server (npm run dev, hot reload) work through DDEV"), lambda: self.on_setup_vite(p))
+            b.set_sensitive(p["name"] not in self.busy)
+            flow.add(b)
         add = icon_button("list-add-symbolic", _("Add command…"), _("Save your own command for this project"), lambda: self.on_add_command(p))
         flow.add(add)
         frame.add(flow)
@@ -500,6 +505,37 @@ class MainWindow(Gtk.ApplicationWindow):
             self.terms.interactive(title, cmd, cwd=p["approot"])
         else:
             self.terms.run(title, ddev.script_simple(p["approot"], [(label, cmd)], _("Done")), cwd=p["approot"])
+
+    def on_setup_vite(self, p):
+        if not self.confirm(
+            _("Set up Vite for DDEV?"),
+            _("Port {port} is exposed in .ddev/config.vite.yaml and a server block is added to your vite.config "
+              "(a copy is kept as .bak). Then the project restarts.").format(port=vite.PORT),
+            _("Set up"),
+        ):
+            return
+        try:
+            _changed, snippet = vite.configure(p["approot"])
+        except OSError as exc:
+            self.error(_("Could not set up Vite"), str(exc))
+            return
+        if snippet:
+            self._show_snippet(snippet)
+        script = ddev.script_simple(p["approot"], [(_("Restarting"), "ddev restart")],
+                                    _("Vite is ready: run “npm run dev” from Quick commands"))
+        self.run_script(f"{p['name']}: Vite", script, p)
+
+    def _show_snippet(self, snippet):
+        dlg = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                                buttons=Gtk.ButtonsType.OK, text=_("Add this to your vite.config"))
+        dlg.format_secondary_text(_("Your vite.config could not be changed automatically (it already has a server "
+                                    "block or an unusual shape). Merge this inside defineConfig({ … }):"))
+        view = Gtk.TextView(monospace=True, editable=False, left_margin=8, top_margin=6)
+        view.get_buffer().set_text(snippet)
+        dlg.get_message_area().pack_start(view, False, False, 6)
+        view.show()
+        dlg.run()
+        dlg.destroy()
 
     def on_add_command(self, p):
         dlg = CommandDialog(self)

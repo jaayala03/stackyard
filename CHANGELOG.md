@@ -4,6 +4,27 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [1.0.0] - 2026-11-07
+
+First stable release: everything planned for Panel DDEV 1.0 is in.
+
+### Added
+- **Set up Vite** (Quick commands, shown when the project has a
+  `vite.config.*`): exposes port 5173 through DDEV in `.ddev/config.vite.yaml`
+  and adds the `server` block to `vite.config` (keeping a `.bak`), so
+  `npm run dev` and hot reload work at `https://<project>.<tld>:5173`. If the
+  config cannot be patched safely, the snippet to paste is shown instead.
+
+### Changed
+- The "Resources" row moved to the end of the project configuration.
+
+### Highlights since 0.1.0
+Projects (new, clone, add folder, settings), tray icon, English/Spanish UI,
+light/dark theme, Git tab (stage, diff, history, commit, branches, pull/push,
+stash, discard, conflicts), GitHub repository picker, quick commands, database
+import/export and snapshots, Xdebug switch, .env editor, sharing via public
+link, notifications, resource usage and auto-stop of idle projects.
+
 ## [0.13.0] - 2026-11-07
 
 ### Added

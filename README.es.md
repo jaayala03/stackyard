@@ -80,6 +80,7 @@ sudo apt remove panel-ddev
 - **Compartir** un proyecto con un enlace público temporal (túnel de Cloudflare).
 - **Editor de .env** con colores, copia de seguridad y «crear desde .env.example».
 - **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
+- **Vite**: un clic para que `npm run dev` y la recarga en caliente funcionen con DDEV.
 - **Comandos rápidos**: atajos del framework (artisan, wp-cli, drush…), los
   scripts de tu `package.json` y tus propios comandos guardados por proyecto.
 - **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,

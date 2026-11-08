@@ -82,6 +82,7 @@ sudo apt remove panel-ddev
 - **Share** a project with a temporary public link (Cloudflare quick tunnel).
 - **.env editor** with highlighting, backup and "create from .env.example".
 - **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
+- **Vite**: one click to make `npm run dev` and hot reload work through DDEV.
 - **Quick commands**: framework shortcuts (artisan, wp-cli, drush…), your
   `package.json` scripts and your own saved commands per project.
 - **Tools**: shell inside the container, live logs, phpMyAdmin, Mailpit,
@@ -117,6 +118,7 @@ run, and if something asks for a password you type it right there.
 | `panel_ddev/share.py` | Share a project (ddev share) |
 | `panel_ddev/envedit.py` | .env editor |
 | `panel_ddev/snapshots.py` | Database snapshots dialog |
+| `panel_ddev/vite.py` | Vite dev server setup for DDEV |
 | `panel_ddev/commands.py` | Quick commands per framework, npm scripts and saved commands |
 | `panel_ddev/github.py` | GitHub repository picker (uses `gh`) |
 | `panel_ddev/terminal.py` | Embedded terminal (VTE) |
