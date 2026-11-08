@@ -321,12 +321,14 @@ class PreferencesDialog(Gtk.Dialog):
             (_("Notifications"), self.notifications),
             (_("Stop idle projects"), self.auto_stop),
         )
+        self.check_updates = Gtk.CheckButton(label=_("Check for new versions once a day"), active=bool(values.get("check_updates", True)))
         for row, (label, widget) in enumerate(rows):
             lbl = Gtk.Label(label=label, xalign=1)
             lbl.get_style_context().add_class("dim-label")
             grid.attach(lbl, 0, row, 1, 1)
             widget.set_hexpand(True)
             grid.attach(widget, 1, row, 1, 1)
+        grid.attach(self.check_updates, 1, len(rows), 1, 1)
         self.show_all()
 
     def values(self):
@@ -335,6 +337,7 @@ class PreferencesDialog(Gtk.Dialog):
             "theme": self.theme.get_active_id(),
             "notifications": self.notifications.get_active_id(),
             "auto_stop": self.auto_stop.get_active_id(),
+            "check_updates": self.check_updates.get_active(),
         }
 
 

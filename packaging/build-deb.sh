@@ -67,5 +67,10 @@ Description: Desktop app to manage DDEV projects
  Available in English and Spanish.
 CONTROL
 
-fakeroot dpkg-deb --build --root-owner-group "$BUILD" "$OUT" >/dev/null
+# --root-owner-group already makes every file owned by root, so fakeroot is optional
+if command -v fakeroot >/dev/null; then
+  fakeroot dpkg-deb --build --root-owner-group "$BUILD" "$OUT" >/dev/null
+else
+  dpkg-deb --build --root-owner-group "$BUILD" "$OUT" >/dev/null
+fi
 echo "$OUT"

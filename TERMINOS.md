@@ -60,6 +60,9 @@ externos solo cuando tú las usas:
   que configure DDEV (p. ej. Cloudflare o ngrok). Cualquiera con el enlace podrá ver
   tu sitio mientras esté activo.
 - **Descarga de imágenes y paquetes** (Docker Hub, Packagist, npm, etc.).
+- **Búsqueda de actualizaciones**: una vez al día la app pregunta a la API de
+  GitHub cuál es la última versión. Solo se envía la petición (ningún dato
+  personal). Puedes desactivarlo en Preferencias.
 
 Esos servicios tratan los datos según sus propias políticas de privacidad.
 

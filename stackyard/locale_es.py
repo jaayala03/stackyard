@@ -417,4 +417,13 @@ ES = {
     '{name} changed on disk': '{name} cambió en el disco',
     '{n} matches': '{n} coincidencias',
     '{n} replaced': '{n} reemplazados',
+    'Check for new versions once a day': 'Buscar versiones nuevas una vez al día',
+    'Update': 'Actualizar',
+    "What's new": 'Novedades',
+    'Skip this version': 'Omitir esta versión',
+    '<b>Stackyard {new}</b> is available (you have {current}).': '<b>Stackyard {new}</b> está disponible (tienes la {current}).',
+    'Update Stackyard': 'Actualizar Stackyard',
+    'Downloading Stackyard {version}': 'Descargando Stackyard {version}',
+    'Installing (it may ask for your password)': 'Instalando (puede pedir tu contraseña)',
+    'Stackyard {version} installed. Quit and reopen the app to use it.': 'Stackyard {version} instalado. Cierra y vuelve a abrir la app para usarlo.',
 }

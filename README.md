@@ -17,6 +17,19 @@ version, Apache or nginx, MariaDB/MySQL/PostgreSQL, phpMyAdmin, Mailpit and
 built-in git. Free and open source. Available in **English and Spanish**, with
 **light and dark** themes.
 
+<p align="center"><img src="docs/screenshots/project.png" alt="Project page" width="860"></p>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/git.png" alt="Git tab"></td>
+    <td><img src="docs/screenshots/code.png" alt="Code tab"></td>
+  </tr>
+  <tr>
+    <td align="center">Git: stage, diff, commit, push</td>
+    <td align="center">Built-in code editor</td>
+  </tr>
+</table>
+
 ## Install
 
 On **Linux Mint 22 / Ubuntu 24.04** (or other Ubuntu/Debian derivatives), open a terminal and run:
@@ -96,6 +109,7 @@ sudo apt remove stackyard
   projects** to save memory.
 - **Notifications** when long actions finish, even with the window hidden.
 - **Preferences**: English or Spanish, light, dark or system theme, notifications.
+- **Update notice** when a new version is published, with one-click update.
 
 Every action runs in an **embedded terminal**: you see exactly which commands
 run, and if something asks for a password you type it right there.
@@ -115,6 +129,7 @@ run, and if something asks for a password you type it right there.
 | `stackyard/ddev.py` | Talks to `ddev` and builds the script of each action |
 | `stackyard/dialogs.py` | New / clone / settings and preferences dialogs |
 | `stackyard/git.py` | Git tab |
+| `stackyard/updates.py` | Update check (GitHub releases) |
 | `stackyard/editor.py` | Code tab: file explorer and editor |
 | `stackyard/tray.py` | Tray icon |
 | `stackyard/resources.py` | Resource usage and idle detection |
@@ -131,6 +146,7 @@ run, and if something asks for a password you type it right there.
 | `packaging/build-deb.sh` | Builds the `.deb` into `dist/` |
 | `packaging/check_translations.py` | Fails if a UI string has no translation |
 | `packaging/test_scripts.py` | Smoke tests for the generated bash scripts |
+| `packaging/ci/smoke-test.sh` | Installs the .deb on a clean Ubuntu and starts the app (CI) |
 | `packaging/release.sh` | Publishes a GitHub release with the `.deb` |
 | `install.sh` | Full installer |
 

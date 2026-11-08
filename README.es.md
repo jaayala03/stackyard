@@ -16,6 +16,19 @@ proyecto con su dominio (`https://mi-app.local`), su versión de PHP y de Node,
 Apache o nginx, MariaDB/MySQL/PostgreSQL, phpMyAdmin, Mailpit y git integrado.
 Gratis y de código abierto. En **español e inglés**, con tema **claro y oscuro**.
 
+<p align="center"><img src="docs/screenshots/project-es-light.png" alt="Página del proyecto" width="860"></p>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/git.png" alt="Pestaña Git"></td>
+    <td><img src="docs/screenshots/code.png" alt="Pestaña Código"></td>
+  </tr>
+  <tr>
+    <td align="center">Git: preparar, diferencias, commit, push</td>
+    <td align="center">Editor de código integrado</td>
+  </tr>
+</table>
+
 ## Instalación
 
 En **Linux Mint 22 / Ubuntu 24.04** (o derivados de Ubuntu/Debian), abre una terminal y ejecuta:
@@ -96,6 +109,7 @@ sudo apt remove stackyard
   de los proyectos sin uso para ahorrar memoria.
 - **Avisos de escritorio** cuando terminan las acciones largas, aunque la ventana esté oculta.
 - **Preferencias**: español o inglés, tema claro, oscuro o el del sistema, avisos.
+- **Aviso de actualización** cuando sale una versión nueva, con actualización en un clic.
 
 Cada acción se ejecuta en una **terminal integrada**: ves exactamente qué
 comandos se lanzan, y si algo pide contraseña la escribes ahí mismo.

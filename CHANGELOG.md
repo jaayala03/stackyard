@@ -4,6 +4,29 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] - 2026-11-07
+
+### Added
+- **Update notice**: once a day the app checks GitHub for a newer release and
+  shows a bar with **Update** (downloads and installs the new `.deb`),
+  **What's new** and **Skip this version**. It can be turned off in
+  Preferences. The terms of use now mention this check.
+- **Continuous integration** (GitHub Actions): every push compiles the code,
+  checks translations, runs the script tests, builds the `.deb` and installs it
+  on a clean Ubuntu 24.04 container to make sure the app starts.
+- Screenshots in the README.
+
+### Fixed
+- `install.sh --local` failed on a clean system because `fakeroot` was missing;
+  it is no longer required to build the package.
+- After changing the language, the replaced window could raise an error when a
+  pending refresh arrived.
+- Git tab: long file names now keep the name visible and trim the folder.
+
+### Verified
+- The full installer was run on a clean Ubuntu 24.04: it installs Docker, DDEV,
+  mkcert and Stackyard, and the app starts.
+
 ## [1.2.0] - 2026-11-07
 
 ### Added

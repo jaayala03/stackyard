@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from stackyard import ddev, i18n, resources  # noqa: E402
+from stackyard import ddev, i18n, resources, updates  # noqa: E402
 from stackyard.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
@@ -64,6 +64,13 @@ def main():
         r = subprocess.run(["bash", "-c", wrapper_command(f.name)])
         if r.returncode != expected_code or pathlib.Path(f.name).exists():
             failures.append(f"wrapper: '{script}' exited {r.returncode} (expected {expected_code}) or left the file")
+
+    # update installer script and version comparison
+    release = {"version": "9.9.9", "url": "https://example.com", "deb": "https://example.com/stackyard_9.9.9_all.deb"}
+    if bash(updates.install_script(release), "-n").returncode:
+        failures.append("update install script: bash -n failed")
+    if not (updates.is_newer("1.10.0", "1.9.9") and not updates.is_newer("1.2.0", "1.2.0")):
+        failures.append("updates.is_newer is wrong")
 
     # idle tracker: quiet for 30 min -> idle; traffic or CPU resets the timer
     t = resources.IdleTracker()

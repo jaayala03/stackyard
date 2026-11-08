@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, notify, resources, share, snapshots, vite  # noqa: E402
+from . import commands, envedit, notify, resources, share, snapshots, updates, vite  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .editor import EditorView  # noqa: E402
 from .git import GitView  # noqa: E402
@@ -137,7 +137,19 @@ class MainWindow(Gtk.ApplicationWindow):
         bottom.set_position(440)
         self.bottom = bottom
         self._terminal_pos = 440
-        self.add(bottom)
+        self.update_bar = Gtk.InfoBar(message_type=Gtk.MessageType.INFO, show_close_button=True)
+        self.update_label = Gtk.Label(xalign=0, wrap=True)
+        self.update_bar.get_content_area().add(self.update_label)
+        self.update_bar.add_button(_("Update"), 1)
+        self.update_bar.add_button(_("What's new"), 2)
+        self.update_bar.add_button(_("Skip this version"), 3)
+        self.update_bar.connect("response", self._on_update_response)
+        self.update_bar.set_no_show_all(True)
+        self._release = None
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        content.pack_start(self.update_bar, False, False, 0)
+        content.pack_start(bottom, True, True, 0)
+        self.add(content)
 
         self.show_all()
         if self.get_screen().get_height() < 900:
@@ -148,6 +160,8 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         self.refresh()
         self._timer = GLib.timeout_add_seconds(REFRESH_SECONDS, self._auto_refresh)
+        GLib.timeout_add_seconds(5, self._check_updates)
+        GLib.timeout_add_seconds(6 * 3600, self._check_updates)
         self.connect("destroy", lambda *_a: GLib.source_remove(self._timer))
 
     def _build_menu_button(self):
@@ -194,6 +208,8 @@ class MainWindow(Gtk.ApplicationWindow):
         threading.Thread(target=work, daemon=True).start()
 
     def set_projects(self, projects, stats=None):
+        if self.get_application() is None:  # window already replaced (e.g. language change)
+            return False
         if stats is not None:
             self.stats = stats
             self._check_idle(projects)
@@ -237,6 +253,36 @@ class MainWindow(Gtk.ApplicationWindow):
             self.selected = None
             self.render_detail()
         return False
+
+    def _check_updates(self):
+        def work():
+            release = updates.check()
+            if release:
+                GLib.idle_add(self.show_update, release)
+        threading.Thread(target=work, daemon=True).start()
+        return True  # keep the 6-hour timer (check() itself runs at most once a day)
+
+    def show_update(self, release):
+        if self.get_application() is None:
+            return False
+        self._release = release
+        self.update_label.set_markup(_("<b>Stackyard {new}</b> is available (you have {current}).").format(
+            new=GLib.markup_escape_text(release["version"]), current=__version__))
+        self.update_bar.set_response_sensitive(1, bool(release.get("deb")))
+        self.update_bar.show()
+        self.update_label.show()
+        return False
+
+    def _on_update_response(self, bar, response):
+        release = self._release
+        if response == 1 and release:
+            self.terms.run(_("Update Stackyard"), updates.install_script(release))
+        elif response == 2 and release:
+            self.open_uri(release["url"])
+            return
+        elif response == 3 and release:
+            updates.skip(release["version"])
+        bar.hide()
 
     def _update_usage(self):
         for row in self.listbox.get_children():
@@ -440,6 +486,8 @@ class MainWindow(Gtk.ApplicationWindow):
         stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
 
     def _on_action_finished(self, title, code):
+        if self.get_application() is None:
+            return
         mode = self.get_application().prefs.get("notifications", "background")
         if notify.should_notify(mode, self):
             notify.finished(title, code == 0, ICON if Path(ICON).exists() else "stackyard", self._show_output)

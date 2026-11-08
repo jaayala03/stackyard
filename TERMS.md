@@ -59,6 +59,9 @@ services only when you use them:
   is configured with (e.g. Cloudflare or ngrok). Anyone with the link can see
   your site while it is active.
 - **Image and package downloads** (Docker Hub, Packagist, npm, etc.).
+- **Update check**: once a day the app asks the GitHub API for the latest
+  version number. Only the request itself is sent (no personal data). You can
+  turn it off in Preferences.
 
 Those services handle data according to their own privacy policies.
 

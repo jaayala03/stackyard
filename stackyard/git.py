@@ -562,7 +562,7 @@ class GitView(Gtk.Box):
         code.set_width_chars(2)
         box.pack_start(code, False, False, 0)
         p = Path(f["path"])
-        name = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.START)
+        name = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)  # keep the file name, trim the folder
         parent = "" if str(p.parent) == "." else f'  <span size="small" foreground="#9a9996">{GLib.markup_escape_text(str(p.parent))}</span>'
         strike = ' strikethrough="true"' if f["code"] == "D" else ""
         name.set_markup(f"<span{strike}>{GLib.markup_escape_text(p.name)}</span>{parent}")

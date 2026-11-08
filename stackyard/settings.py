@@ -12,7 +12,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 CONFIG_DIR = Path(GLib.get_user_config_dir()) / "stackyard"
 CONFIG_FILE = CONFIG_DIR / "settings.json"
-DEFAULTS = {"language": "auto", "theme": "system", "notifications": "background", "auto_stop": "0"}
+DEFAULTS = {"language": "auto", "theme": "system", "notifications": "background", "auto_stop": "0", "check_updates": True}
 
 LANGUAGES = [("auto", "System default"), ("en", "English"), ("es", "Español")]
 THEMES = [("system", "System default"), ("light", "Light"), ("dark", "Dark")]
@@ -29,7 +29,7 @@ def load():
         data = json.loads(CONFIG_FILE.read_text())
     except (OSError, ValueError):
         data = {}
-    return {**DEFAULTS, **{k: v for k, v in data.items() if k in DEFAULTS or not k.startswith("_")}}
+    return {**DEFAULTS, **data}
 
 
 def save(values):
