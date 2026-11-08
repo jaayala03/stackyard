@@ -4,6 +4,20 @@ All published versions of Panel DDEV. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [0.12.0] - 2026-11-07
+
+### Added
+- Git tab:
+  - **Discard changes** of a file (right-click → Discard changes…), with
+    confirmation. Works for modified, new, added and renamed files.
+  - **Stash** menu: save your changes aside (including new files) with an
+    optional description, then apply, pop or delete each stash.
+  - **Conflict resolution**: a banner appears during a merge, rebase or
+    cherry-pick with the number of conflicted files. Right-click a file to use
+    your version, their version or mark it as resolved, then **Continue** or
+    **Abort**.
+  - **Pull (merge)** and **Pull (rebase)** next to the regular fast-forward pull.
+
 ## [0.11.0] - 2026-11-07
 
 ### Added

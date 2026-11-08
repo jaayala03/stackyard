@@ -87,7 +87,8 @@ sudo apt remove panel-ddev
 - **Tools**: shell inside the container, live logs, phpMyAdmin, Mailpit,
   database import/export and **snapshots** (save and restore copies of the database).
 - **Git**: changes with checkboxes to stage them, coloured diffs, history,
-  commit (Ctrl+Enter), branches, fetch, pull and push.
+  commit (Ctrl+Enter), branches, fetch, pull (fast-forward, merge or rebase) and
+  push, discard changes, stash, and conflict resolution (ours / theirs).
 - **Notifications** when long actions finish, even with the window hidden.
 - **Preferences**: English or Spanish, light, dark or system theme, notifications.
 

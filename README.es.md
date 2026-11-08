@@ -86,7 +86,8 @@ sudo apt remove panel-ddev
   Mailpit, importar/exportar la base de datos y **copias** (guardar y restaurar
   copias completas de la base de datos).
 - **Git**: cambios con casillas para prepararlos, diferencias con colores,
-  historial, commit (Ctrl+Enter), ramas, fetch, pull y push.
+  historial, commit (Ctrl+Enter), ramas, fetch, pull (fast-forward, merge o
+  rebase) y push, descartar cambios, stash y resolución de conflictos.
 - **Avisos de escritorio** cuando terminan las acciones largas, aunque la ventana esté oculta.
 - **Preferencias**: español o inglés, tema claro, oscuro o el del sistema, avisos.
 

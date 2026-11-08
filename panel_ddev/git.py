@@ -104,7 +104,7 @@ def _entry(xy, path, orig=None):
     staged = not untracked and x not in ".!"
     unstaged = untracked or y not in "."
     code = "?" if untracked else ("!" if xy == "!!" else (y if y != "." else x))
-    return {"path": path, "orig": orig, "code": code, "staged": staged, "unstaged": unstaged, "conflict": False}
+    return {"path": path, "orig": orig, "code": code, "x": x, "staged": staged, "unstaged": unstaged, "conflict": False}
 
 
 def branches(repo):
@@ -171,6 +171,85 @@ def unstage_all(repo):
 
 def commit(repo, message):
     return run(repo, "commit", "-F", "-", stdin=message)
+
+
+def discard(repo, f):
+    """Throws away the local changes of one file (it cannot be undone)."""
+    root = Path(repo)
+    if f["code"] == "?":
+        target = root / f["path"]
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        else:
+            target.unlink(missing_ok=True)
+    elif f["orig"]:  # rename: drop the new path, bring back the old one
+        run(repo, "rm", "-f", "-q", "--", f["path"])
+        run(repo, "restore", "--source=HEAD", "--staged", "--worktree", "--", f["orig"])
+    elif f["x"] == "A" or not has_head(repo):  # new file that is only in the index
+        run(repo, "rm", "-f", "-q", "--", f["path"])
+    else:
+        run(repo, "restore", "--source=HEAD", "--staged", "--worktree", "--", f["path"])
+
+
+# ------------------------------------------------------------ stash
+def stash_list(repo):
+    out = run(repo, "stash", "list", "--format=%gd%x1f%s%x1f%cr")
+    items = []
+    for line in out.splitlines():
+        ref, subject, when = (line.split("\x1f") + ["", ""])[:3]
+        items.append({"ref": ref, "subject": subject, "when": when})
+    return items
+
+
+def stash_push(repo, message):
+    args = ["stash", "push", "--include-untracked"]
+    if message:
+        args += ["-m", message]
+    run(repo, *args)
+
+
+def stash_apply(repo, ref, pop=False):
+    run(repo, "stash", "pop" if pop else "apply", ref)
+
+
+def stash_drop(repo, ref):
+    run(repo, "stash", "drop", ref)
+
+
+# ------------------------------------------------------------ conflicts
+def operation_in_progress(repo):
+    """'merge', 'rebase', 'cherry-pick' or None."""
+    def exists(name):
+        rel = run(repo, "rev-parse", "--git-path", name).strip()
+        return (Path(repo) / rel).exists()
+    if exists("rebase-merge") or exists("rebase-apply"):
+        return "rebase"
+    if exists("MERGE_HEAD"):
+        return "merge"
+    if exists("CHERRY_PICK_HEAD"):
+        return "cherry-pick"
+    return None
+
+
+def resolve_with(repo, path, side):
+    """side: 'ours' or 'theirs'. Takes that version of the file and marks it resolved."""
+    run(repo, "checkout", f"--{side}", "--", path)
+    run(repo, "add", "--", path)
+
+
+def mark_resolved(repo, path):
+    run(repo, "add", "--", path)
+
+
+def abort_operation(repo, op):
+    run(repo, op, "--abort")
+
+
+def continue_command(op):
+    """Shell command that finishes the operation without opening an editor."""
+    if op == "merge":
+        return "git -c core.editor=true commit --no-edit"
+    return f"GIT_EDITOR=true git {op} --continue"
 
 
 # ===================================================================== UI
@@ -290,9 +369,31 @@ class GitView(Gtk.Box):
         self.pull_btn.connect("clicked", self.on_pull)
         self.fetch_btn = _button("emblem-synchronizing-symbolic", "Fetch", _("Check for new changes (git fetch)"))
         self.fetch_btn.connect("clicked", self.on_fetch)
-        for w in (refresh, self.push_btn, self.pull_btn, self.fetch_btn):
+        self.pull_menu = Gtk.MenuButton()
+        self.pull_menu.add(Gtk.Image.new_from_icon_name("pan-down-symbolic", Gtk.IconSize.BUTTON))
+        self.pull_menu.set_tooltip_text(_("More pull options"))
+        menu = Gtk.Menu()
+        for label, cmd in ((_("Pull (merge)"), "git pull --no-rebase"), (_("Pull (rebase)"), "git pull --rebase")):
+            item = Gtk.MenuItem(label=label)
+            item.connect("activate", lambda _i, l=label, c=cmd: self._run(l, c))
+            menu.append(item)
+        menu.show_all()
+        self.pull_menu.set_popup(menu)
+        self.stash_btn = Gtk.MenuButton(label=_("Stash"))
+        self.stash_btn.set_tooltip_text(_("Put changes aside and bring them back later (git stash)"))
+        for w in (refresh, self.push_btn, self.pull_menu, self.pull_btn, self.fetch_btn, self.stash_btn):
             bar.pack_end(w, False, False, 0)
         self.pack_start(bar, False, False, 0)
+
+        # ---- banner shown while a merge/rebase has conflicts
+        self.banner = Gtk.InfoBar(message_type=Gtk.MessageType.WARNING, show_close_button=False)
+        self.banner_label = Gtk.Label(xalign=0, wrap=True)
+        self.banner.get_content_area().add(self.banner_label)
+        self.banner.add_button(_("Continue"), 1)
+        self.banner.add_button(_("Abort"), 2)
+        self.banner.connect("response", self.on_banner_response)
+        self.banner.set_no_show_all(True)
+        self.pack_start(self.banner, False, False, 0)
 
         # ---- left: changes + commit
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -310,6 +411,7 @@ class GitView(Gtk.Box):
         self.changes = Gtk.ListBox()
         self.changes.set_placeholder(self._dim(_("No changes.")))
         self.changes.connect("row-selected", self.on_file_selected)
+        self.changes.connect("button-press-event", self.on_changes_click)
         cs = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         cs.add(self.changes)
         left.pack_start(cs, True, True, 0)
@@ -407,9 +509,12 @@ class GitView(Gtk.Box):
         for b in (self.push_btn, self.pull_btn, self.fetch_btn):
             b.set_sensitive(bool(self.remotes))
         self.pull_btn.set_sensitive(bool(self.remotes and st["upstream"]))
+        self.pull_menu.set_sensitive(bool(self.remotes and st["upstream"]))
 
         # changes
         self.files = st["files"]
+        self._update_stash_menu()
+        self._update_banner()
         staged = sum(1 for f in self.files if f["staged"])
         self.changes_title.set_markup(
             _("<b>Changes</b> ({total}) · {staged} staged").format(total=len(self.files), staged=staged)
@@ -517,6 +622,119 @@ class GitView(Gtk.Box):
         r = dlg.run()
         dlg.destroy()
         return r == Gtk.ResponseType.OK
+
+    # ------------------------------------------------------------ stash
+    def _update_stash_menu(self):
+        try:
+            stashes = stash_list(self.repo)
+        except GitError:
+            stashes = []
+        menu = Gtk.Menu()
+        save = Gtk.MenuItem(label=_("Save changes to stash…"))
+        save.set_sensitive(bool(self.files))
+        save.connect("activate", self.on_stash_save)
+        menu.append(save)
+        if stashes:
+            menu.append(Gtk.SeparatorMenuItem())
+        for st in stashes:
+            sub = Gtk.Menu()
+            for label, fn in (
+                (_("Apply and remove (pop)"), lambda _i, r=st["ref"]: self._safe(stash_apply, self.repo, r, True)),
+                (_("Apply and keep"), lambda _i, r=st["ref"]: self._safe(stash_apply, self.repo, r, False)),
+                (_("Delete…"), lambda _i, s=st: self.on_stash_drop(s)),
+            ):
+                item = Gtk.MenuItem(label=label)
+                item.connect("activate", fn)
+                sub.append(item)
+            top = Gtk.MenuItem(label=f"{st['subject']}  ·  {st['when']}")
+            top.set_submenu(sub)
+            menu.append(top)
+        menu.show_all()
+        self.stash_btn.set_popup(menu)
+        self.stash_btn.set_label(_("Stash") + (f" ({len(stashes)})" if stashes else ""))
+
+    def on_stash_save(self, *_a):
+        dlg = Gtk.Dialog(title=_("Save changes to stash"), transient_for=self.window, modal=True)
+        dlg.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        ok = dlg.add_button(_("Save"), Gtk.ResponseType.OK)
+        ok.get_style_context().add_class("suggested-action")
+        dlg.set_default_response(Gtk.ResponseType.OK)
+        entry = Gtk.Entry(placeholder_text=_("Description (optional)"), activates_default=True, margin=14)
+        dlg.get_content_area().add(entry)
+        dlg.show_all()
+        message = entry.get_text().strip() if dlg.run() == Gtk.ResponseType.OK else None
+        dlg.destroy()
+        if message is not None:
+            self._safe(stash_push, self.repo, message)
+
+    def on_stash_drop(self, st):
+        if self._ask(_("Delete this stash?"), f"{st['subject']}\n" + _("This cannot be undone."), _("Delete")):
+            self._safe(stash_drop, self.repo, st["ref"])
+
+    # ------------------------------------------------------------ conflicts
+    def _update_banner(self):
+        try:
+            self.operation = operation_in_progress(self.repo)
+        except GitError:
+            self.operation = None
+        conflicts = sum(1 for f in self.files if f["conflict"])
+        if not self.operation:
+            self.banner.hide()
+            return
+        if conflicts:
+            text = _("{op} in progress with {n} conflicted file(s). Right-click each one to resolve it, then press Continue.").format(op=self.operation.capitalize(), n=conflicts)
+        else:
+            text = _("{op} in progress. All conflicts are resolved: press Continue to finish.").format(op=self.operation.capitalize())
+        self.banner_label.set_text(text)
+        self.banner.set_response_sensitive(1, conflicts == 0)
+        self.banner.show()
+        self.banner_label.show()
+
+    def on_banner_response(self, _bar, response):
+        op = self.operation
+        if not op:
+            return
+        if response == 1:
+            self._run(_("continue {op}").format(op=op), continue_command(op))
+        elif response == 2 and self._ask(_("Abort the {op}?").format(op=op), _("Your branch goes back to how it was before it started."), _("Abort")):
+            self._safe(abort_operation, self.repo, op)
+
+    # ------------------------------------------------------------ file context menu
+    def on_changes_click(self, listbox, event):
+        if event.button != 3:
+            return False
+        row = listbox.get_row_at_y(int(event.y))
+        if not row:
+            return False
+        listbox.select_row(row)
+        f = row.file
+        menu = Gtk.Menu()
+        items = []
+        if f["conflict"]:
+            items += [
+                (_("Use my version (ours)"), lambda: self._safe(resolve_with, self.repo, f["path"], "ours")),
+                (_("Use their version (theirs)"), lambda: self._safe(resolve_with, self.repo, f["path"], "theirs")),
+                (_("Mark as resolved (I edited it)"), lambda: self._safe(mark_resolved, self.repo, f["path"])),
+            ]
+        else:
+            items.append((_("Discard changes…"), lambda: self.on_discard(f)))
+        items.append((_("Open containing folder"), lambda: self._open_folder(f)))
+        for label, cb in items:
+            item = Gtk.MenuItem(label=label)
+            item.connect("activate", lambda _i, c=cb: c())
+            menu.append(item)
+        menu.show_all()
+        menu.popup_at_pointer(event)
+        return True
+
+    def _open_folder(self, f):
+        folder = (Path(self.repo) / f["path"]).parent
+        Gtk.show_uri_on_window(self.window, folder.as_uri(), Gdk.CURRENT_TIME)
+
+    def on_discard(self, f):
+        what = _("The new file will be deleted.") if f["code"] in "?A" else _("The file goes back to its last committed version.")
+        if self._ask(_("Discard changes in {path}?").format(path=f["path"]), what + "\n" + _("This cannot be undone."), _("Discard")):
+            self._safe(discard, self.repo, f)
 
     def on_toggle(self, _check, f):
         fully_staged = f["staged"] and not (f["unstaged"] and f["code"] != "?")
