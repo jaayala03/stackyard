@@ -9,7 +9,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import ddev  # noqa: E402
+from . import REPO_URL, __version__, ddev  # noqa: E402
 from .dialogs import ProjectDialog  # noqa: E402
 from .git import GitView  # noqa: E402
 from .terminal import TerminalTabs  # noqa: E402
@@ -87,6 +87,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self.header = header
         header.pack_start(_icon_button("document-new-symbolic", "Nuevo", "Crear un proyecto nuevo", self.on_new))
         header.pack_start(_icon_button("folder-download-symbolic", "Clonar", "Clonar un repositorio con git", self.on_clone))
+        about = Gtk.Button.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
+        about.set_tooltip_text("Acerca de Panel DDEV")
+        about.connect("clicked", lambda *_: self.on_about())
+        header.pack_end(about)
         header.pack_end(_icon_button("system-shutdown-symbolic", "Apagar todo", "Detener todos los proyectos (ddev poweroff)", self.on_poweroff))
         refresh = Gtk.Button.new_from_icon_name("view-refresh-symbolic", Gtk.IconSize.BUTTON)
         refresh.set_tooltip_text("Actualizar")
@@ -376,6 +380,24 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.render_detail()
 
         self.terms.run(title, script, cwd=cwd, on_done=done)
+
+    def on_about(self):
+        dlg = Gtk.AboutDialog(transient_for=self, modal=True)
+        dlg.set_program_name("Panel DDEV")
+        dlg.set_version(__version__)
+        dlg.set_comments("Crea, clona y gestiona tus proyectos DDEV desde una ventana.\n"
+                         "Proyecto independiente, no afiliado al proyecto DDEV.")
+        dlg.set_website(REPO_URL)
+        dlg.set_website_label("Repositorio en GitHub")
+        dlg.set_authors(["Jonathan Alberto Ayala Mendoza"])
+        dlg.set_copyright("© 2026 Jonathan Alberto Ayala Mendoza")
+        dlg.set_license_type(Gtk.License.MIT_X11)
+        dlg.add_credit_section("Términos de uso", [f"Términos y privacidad {REPO_URL}/blob/main/TERMINOS.md"])
+        if Path(ICON).exists():
+            from gi.repository import GdkPixbuf
+            dlg.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_size(ICON, 96, 96))
+        dlg.run()
+        dlg.destroy()
 
     # ================================================================ acciones
     def action(self, verb):
