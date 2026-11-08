@@ -95,6 +95,8 @@ sudo apt remove stackyard
   rebuilt) inside the container, `.env` files created with the DDEV URLs and
   generated secrets, Vite allowed on the local domain with hot reload, Chromium
   for Puppeteer. No Node needed on your computer.
+- **Deploy with pm2**: a Deploy tab for projects with an ecosystem file (any
+  extension): deploy, roll back, reload, status and live logs on the server.
 - **HTTP or HTTPS** per project.
 - **Add folder**: use code you already have; the framework and public folder
   are detected automatically.
@@ -145,6 +147,8 @@ run, and if something asks for a password you type it right there.
 | `stackyard/share.py` | Share a project (ddev share) |
 | `stackyard/envedit.py` | .env editor |
 | `stackyard/snapshots.py` | Database snapshots dialog |
+| `stackyard/pm2.py` | pm2 ecosystem reader and deploy commands |
+| `stackyard/deploy.py` | Deploy tab |
 | `stackyard/nodeproj.py` | Node.js project detection and DDEV services setup |
 | `stackyard/vite.py` | Vite dev server setup for DDEV |
 | `stackyard/commands.py` | Quick commands per framework, npm scripts and saved commands |

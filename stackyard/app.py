@@ -12,7 +12,8 @@ from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
 
 from . import REPO_URL, __version__, ddev, i18n, settings  # noqa: E402
 from . import tray as traymod  # noqa: E402
-from . import commands, envedit, nodeproj, notify, resources, share, snapshots, updates, vite  # noqa: E402
+from . import commands, envedit, nodeproj, notify, pm2, resources, share, snapshots, updates, vite  # noqa: E402
+from .deploy import DeployView  # noqa: E402
 from .dialogs import CommandDialog, PreferencesDialog, ProjectDialog  # noqa: E402
 from .editor import EditorView  # noqa: E402
 from .git import GitView  # noqa: E402
@@ -102,6 +103,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.editor = ddev.find_editor()
         self.git_views = {}
         self.editors = {}
+        self.deploys = {}
         self.current_page = "project"
         self._rebuilding = False
         self._pending_select = None
@@ -354,7 +356,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # detach them before the old stack is destroyed. Detaching makes the old
         # stack switch page: _rebuilding tells _on_page_changed to ignore it.
         self._rebuilding = True
-        for view in list(self.git_views.values()) + list(self.editors.values()):
+        for view in list(self.git_views.values()) + list(self.editors.values()) + list(self.deploys.values()):
             if view.get_parent():
                 view.get_parent().remove(view)
         self._rebuilding = False
@@ -401,6 +403,16 @@ class MainWindow(Gtk.ApplicationWindow):
         if editor.get_parent():
             editor.get_parent().remove(editor)
         stack.add_titled(editor, "code", _("Code"))
+        if pm2.find(p["approot"]):
+            deploy = self.deploys.get(p["name"])
+            if deploy is None or deploy.approot != p["approot"]:
+                deploy = self.deploys[p["name"]] = DeployView(p, self)
+            if deploy.get_parent():
+                deploy.get_parent().remove(deploy)
+            deploy.project = p
+            stack.add_titled(deploy, "deploy", _("Deploy"))
+        elif self.current_page == "deploy":
+            self.current_page = "project"
         self.detail.pack_start(stack, True, True, 0)
 
         url = project_url(p)
@@ -520,6 +532,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.detail.show_all()
         stack.set_visible_child_name(self.current_page)
+        if self.current_page == "deploy" and p["name"] in self.deploys:
+            self.deploys[p["name"]].refresh(p)
         switcher.set_stack(stack)  # after choosing the page so the right button is active
         stack.connect("notify::visible-child-name", self._on_page_changed, gitview)
 
@@ -656,6 +670,8 @@ class MainWindow(Gtk.ApplicationWindow):
         previous, self.current_page = self.current_page, stack.get_visible_child_name()
         if self.current_page == "git":
             gitview.refresh()
+        if self.current_page == "deploy" and self.selected and self.selected["name"] in self.deploys:
+            self.deploys[self.selected["name"]].refresh(self.selected)
         # the editor gets most of the height; the terminal comes back on other pages
         if self.current_page == "code" and previous != "code":
             self._terminal_pos = self.bottom.get_position()

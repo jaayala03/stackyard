@@ -93,6 +93,9 @@ sudo apt remove stackyard
   recompilados) dentro del contenedor, `.env` creados con las URLs de DDEV y
   secretos generados, Vite aceptando el dominio local con recarga en caliente y
   Chromium para Puppeteer. No necesitas Node en tu equipo.
+- **Despliegue con pm2**: pestaña Despliegue para proyectos con archivo ecosystem
+  (cualquier extensión): desplegar, revertir, recargar, estado y logs en vivo en
+  el servidor.
 - **HTTP o HTTPS** por proyecto.
 - **Añadir carpeta**: usa código que ya tienes; detecta el framework y la
   carpeta pública automáticamente.

@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from stackyard import ddev, i18n, nodeproj, resources, updates  # noqa: E402
+from stackyard import ddev, i18n, nodeproj, pm2, resources, updates  # noqa: E402
 from stackyard.terminal import wrapper_command  # noqa: E402
 
 OPTIONS = {
@@ -103,6 +103,36 @@ def main():
                 "hmr": (("wss" if scheme == "https" else "'ws'") in (root / ".ddev/vite.frontend.ddev.config.mjs").read_text()),
             }
             failures += [f"node [{scheme}]: {k}" for k, ok in checks.items() if not ok]
+
+    # pm2 ecosystem (JSON and YAML; JS needs Docker, tested by hand): apps are merged with
+    # the detected services and the deploy section is read without secrets
+    for fname, content in (
+        ("ecosystem.config.json", '{"apps": [{"name": "api", "script": "./backend/src/server.js", "env_production": {"PORT": 3005, "API_KEY": "s3cr3t"}},'
+                                  ' {"name": "queue", "script": "./backend/worker.js"}],'
+                                  ' "deploy": {"production": {"user": "deploy", "host": "example.com", "ref": "origin/main", "path": "/srv/app"}}}'),
+        ("ecosystem.config.yml", "apps:\n  - name: api\n    script: ./backend/src/server.js\n    env_production: {PORT: 3005, API_KEY: s3cr3t}\n"
+                                 "  - name: queue\n    script: ./backend/worker.js\ndeploy:\n  production: {user: deploy, host: example.com, ref: origin/main, path: /srv/app}\n"),
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "backend/src").mkdir(parents=True)
+            (root / "backend/package.json").write_text('{"scripts": {"dev": "node src/server.js"}, "dependencies": {"express": "4"}}')
+            (root / "backend/src/server.js").write_text("const PORT = process.env.PORT || 3001;")
+            (root / fname).write_text(content)
+            info = pm2.summary(root)
+            plan = nodeproj.analyze(root)
+            services = {s["name"]: s for s in plan["services"]}
+            checks = {
+                "found": info and info["file"].name == fname,
+                "apps": [a["name"] for a in info["apps"]] == ["api", "queue"],
+                "no secret": "s3cr3t" not in repr(info),
+                "deploy": pm2.ssh_target(info["deploy"]["production"]) == "deploy@example.com",
+                "backend = pm2 api": services["backend"].get("pm2") == "api" and services["backend"]["port"] == 3005,
+                "worker added": services.get("queue", {}).get("kind") == "worker",
+                "worker not exposed": "name: queue\n    container_port" not in nodeproj.ddev_yaml(plan),
+                "deploy cmd": bash(pm2.in_container(pm2.deploy_cmd(info["file"], "production")), "-n").returncode == 0,
+            }
+            failures += [f"pm2 [{fname}]: {k}" for k, ok in checks.items() if not ok]
 
     # idle tracker: quiet for 30 min -> idle; traffic or CPU resets the timer
     t = resources.IdleTracker()

@@ -4,6 +4,25 @@ All published versions of Stackyard (called Panel DDEV before 1.1.0). The format
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [SemVer](https://semver.org/).
 
+## [1.5.0] - 2026-11-08
+
+### Added
+- **Deploy** tab for projects with a pm2 ecosystem file
+  (`ecosystem.config.js`, `.cjs`, `.mjs`, `.ts`, `.json`, `.json5`, `.yaml`,
+  `.yml`, `ecosystem.*`, `pm2.config.*`, `process.json`…):
+  - environment selector (production, staging…) with server, folder, branch,
+    repository and post-deploy command;
+  - **Deploy** (`pm2 deploy`), **Roll back** (`revert 1`), **First-time setup**,
+    **Reload app**, **Status** (`pm2 ls`), **Live logs** and **Test connection**
+    on the server, with confirmation for the actions that change production;
+  - **Load my SSH keys** (`ddev auth ssh`); everything runs in the project's
+    container, so Node and pm2 are not needed on this computer.
+- Local Node services follow the ecosystem: the service that runs an app's
+  script takes its pm2 name and port, and the other apps (workers, cron
+  scripts…) run as background services.
+- JS/MJS/CJS/TS ecosystem files are read with the Node of the DDEV image, in a
+  container without network; secrets in `env*` blocks are never shown.
+
 ## [1.4.0] - 2026-11-08
 
 ### Added

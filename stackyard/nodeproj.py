@@ -24,6 +24,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from . import pm2
+
 SKIP_DIRS = {"node_modules", ".git", ".ddev", "vendor", "dist", "build", ".next", ".nuxt", "coverage", ".cache"}
 SERVER_DEPS = ("express", "fastify", "koa", "hono", "@nestjs/core", "@hapi/hapi", "restify", "@adonisjs/core", "polka")
 FRONTEND_DEPS = ("vite",)
@@ -184,6 +186,9 @@ def analyze(root, scheme="https"):
             script = "dev" if "dev" in scripts else ("start" if "start" in scripts else None)
             command = f"{pm} run {script}" if script else f"node {pkg.get('main', 'index.js')}"
             services.append({"name": name, "dir": rel, "kind": kind, "port": _server_port(folder, pkg), "command": command, "pm": pm, "native": native})
+    if not services and not pm2.find(root):
+        return None
+    _merge_pm2(root, services, used)
     if not services:
         return None
 
@@ -192,6 +197,9 @@ def analyze(root, scheme="https"):
     taken = set(RESERVED_PORTS)
     for s in services:
         s["primary"] = s is primary
+        if s["kind"] == "worker":  # background process without a web port
+            s["https_port"] = s["http_port"] = s["public_port"] = None
+            continue
         if s["primary"]:
             s["https_port"], s["http_port"] = 443, 80
         else:
@@ -214,6 +222,38 @@ def analyze(root, scheme="https"):
         "native": sorted(d for d in NATIVE_DEPS if d in deps_all),
         "yarn_or_pnpm": any(s["pm"] != "npm" for s in services),
     }
+
+
+def _merge_pm2(root, services, used):
+    """Uses the pm2 ecosystem so local services match production: apps whose
+    script lives in a detected service get its pm2 name and port; the other
+    apps (queue workers, cron scripts…) become extra background services."""
+    info = pm2.summary(root)
+    if not info or not info["apps"]:
+        return
+    for app in info["apps"]:
+        rel = pm2.script_path_in(root, app)
+        if rel is None:
+            continue
+        owner = next((s for s in sorted(services, key=lambda x: -len(x["dir"]))
+                      if s["dir"] == "." or rel.parts[:len(Path(s["dir"]).parts)] == Path(s["dir"]).parts), None)
+        if owner and owner["kind"] == "server" and "pm2" not in owner:
+            owner["pm2"] = app["name"]
+            if app["port"]:
+                owner["port"] = app["port"]
+            continue
+        if owner and owner.get("pm2") == app["name"]:
+            continue
+        name = re.sub(r"[^a-z0-9-]+", "-", app["name"].lower()).strip("-") or "worker"
+        while name in used:
+            name += "-2"
+        used.add(name)
+        interpreter = app.get("interpreter") or "node"
+        command = f"{interpreter} {rel}" + (f" {app['args']}" if app["args"] else "")
+        services.append({
+            "name": name, "dir": ".", "kind": "server" if app["port"] else "worker", "port": app["port"] or 0,
+            "command": command, "pm": "npm", "native": [], "pm2": app["name"],
+        })
 
 
 def ddev_config_flags(plan):
@@ -239,7 +279,7 @@ def _yaml_str(value):
 
 
 def svc_url(name, tld, service, scheme="https"):
-    return _url(name, tld, service["public_port"], scheme)
+    return _url(name, tld, service["public_port"], scheme) if service.get("public_port") else ""
 
 
 def ddev_yaml(plan):
@@ -258,7 +298,7 @@ def ddev_yaml(plan):
         lines += [f"  - name: {s['name']}", f"    command: {_yaml_str(cmd)}", f"    directory: {workdir}"]
     lines += ["", "web_extra_exposed_ports:"]
     # the primary service goes first: DDEV uses the first exposed port as the project URL
-    for s in sorted(plan["services"], key=lambda svc: not svc["primary"]):
+    for s in sorted((x for x in plan["services"] if x["kind"] != "worker"), key=lambda svc: not svc["primary"]):
         lines += [f"  - name: {s['name']}", f"    container_port: {s['port']}",
                   f"    http_port: {s['http_port']}", f"    https_port: {s['https_port']}"]
     lines += ["", "hooks:", "  post-start:", "    - exec: \"bash /var/www/html/.ddev/stackyard-node-prepare.sh\"", ""]
@@ -348,7 +388,7 @@ def setup_env(plan, name, tld):
     root = Path(plan["root"])
     notes, missing = [], []
     scheme = plan["scheme"]
-    port_urls = {s["port"]: _url(name, tld, s["public_port"], scheme) for s in plan["services"]}
+    port_urls = {s["port"]: _url(name, tld, s["public_port"], scheme) for s in plan["services"] if s["public_port"]}
     # URLs this project already points to (previous run, maybe with the other scheme)
     own_url = re.compile(rf"https?://{re.escape(name)}\.{re.escape(tld)}(?::(\d+))?")
 
@@ -362,6 +402,8 @@ def setup_env(plan, name, tld):
                 return _url(name, tld, svc["public_port"], scheme)
         return match.group(0)
     for s in plan["services"]:
+        if s["kind"] == "worker":
+            continue
         folder = root / s["dir"]
         if s["kind"] == "vite":
             # Vite reads VITE_* at build time: point local URLs to DDEV in .env.development.local
@@ -435,7 +477,9 @@ def apply(plan, name, tld):
 
     report = ["Services:"]
     for s in plan["services"]:
-        report.append(f"  {s['name']:<10} {s['kind']:<7} {s['dir']:<12} → {_url(name, tld, s['public_port'], plan['scheme'])}")
+        where = _url(name, tld, s["public_port"], plan["scheme"]) if s["public_port"] else "(background)"
+        pm2_note = f"  [pm2: {s['pm2']}]" if s.get("pm2") else ""
+        report.append(f"  {s['name']:<10} {s['kind']:<7} {s['dir']:<12} → {where}{pm2_note}")
     report.append(f"Node {plan['node']} · database: {plan['database'] or 'none'}"
                   + (" · Chromium for Puppeteer" if plan["puppeteer"] else "")
                   + (f" · native modules: {', '.join(plan['native'])}" if plan["native"] else ""))
