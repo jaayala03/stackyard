@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Launcher: runs Panel DDEV from this folder (source checkout or /usr/lib/panel-ddev)."""
 import os
 import sys
 

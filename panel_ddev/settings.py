@@ -1,0 +1,94 @@
+"""User preferences (language and theme), stored as JSON in the XDG config dir."""
+
+import json
+import os
+import re
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk  # noqa: E402
+
+CONFIG_DIR = Path(GLib.get_user_config_dir()) / "panel-ddev"
+CONFIG_FILE = CONFIG_DIR / "settings.json"
+DEFAULTS = {"language": "auto", "theme": "system"}
+
+LANGUAGES = [("auto", "System default"), ("en", "English"), ("es", "Español")]
+THEMES = [("system", "System default"), ("light", "Light"), ("dark", "Dark")]
+
+
+def load():
+    try:
+        data = json.loads(CONFIG_FILE.read_text())
+    except (OSError, ValueError):
+        data = {}
+    return {**DEFAULTS, **{k: v for k, v in data.items() if k in DEFAULTS or not k.startswith("_")}}
+
+
+def save(values):
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(values, indent=2))
+    os.replace(tmp, CONFIG_FILE)
+
+
+# --------------------------------------------------------------------- theme
+_THEME_DIRS = [
+    Path.home() / ".themes",
+    Path(GLib.get_user_data_dir()) / "themes",
+    *(Path(d) / "themes" for d in GLib.get_system_data_dirs()),
+]
+_original = {}
+
+
+def _theme_exists(name):
+    return any((d / name / "gtk-3.0").is_dir() for d in _THEME_DIRS)
+
+
+def _is_dark(name):
+    return "dark" in name.lower()
+
+
+def _light_variant(name):
+    for candidate in (re.sub(r"-?[Dd]ark", "", name), name.replace("-dark", ""), "Adwaita"):
+        if candidate and _theme_exists(candidate):
+            return candidate
+    return "Adwaita"
+
+
+def _dark_variant(name):
+    if _is_dark(name):
+        return name
+    parts = name.split("-")
+    candidates = ["-".join(parts[:i] + ["Dark"] + parts[i:]) for i in range(1, len(parts) + 1)]
+    candidates += [f"{name}-dark", f"{name}-Dark"]
+    for candidate in candidates:
+        if _theme_exists(candidate):
+            return candidate
+    return None
+
+
+def apply_theme(mode):
+    """mode: 'system', 'light' or 'dark'. Returns True if the result is dark."""
+    gtk = Gtk.Settings.get_default()
+    if not _original:
+        _original["name"] = gtk.get_property("gtk-theme-name")
+        _original["prefer_dark"] = gtk.get_property("gtk-application-prefer-dark-theme")
+    base = _original["name"]
+
+    if mode == "light":
+        name, prefer_dark = (_light_variant(base) if _is_dark(base) else base), False
+    elif mode == "dark":
+        name, prefer_dark = (_dark_variant(base) or base), True
+    else:
+        name, prefer_dark = base, _original["prefer_dark"]
+
+    gtk.set_property("gtk-theme-name", name)
+    gtk.set_property("gtk-application-prefer-dark-theme", prefer_dark)
+    return is_dark_now()
+
+
+def is_dark_now():
+    gtk = Gtk.Settings.get_default()
+    return _is_dark(gtk.get_property("gtk-theme-name")) or gtk.get_property("gtk-application-prefer-dark-theme")

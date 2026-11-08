@@ -1,41 +1,44 @@
-<p align="center"><img src="icono.svg" width="96" alt="Panel DDEV"></p>
+<p align="center"><img src="icon.svg" width="96" alt="Panel DDEV"></p>
 
 <h1 align="center">Panel DDEV</h1>
 
 <p align="center">
-Tu entorno de desarrollo web local en Linux, desde una ventana.<br>
-Crea, clona y gestiona proyectos PHP, Laravel, WordPress y más — con <a href="https://ddev.com">DDEV</a> por debajo.
+Your local web development environment on Linux, from one window.<br>
+Create, clone and manage PHP, Laravel, WordPress and other projects — powered by <a href="https://ddev.com">DDEV</a>.
 </p>
+
+<p align="center"><a href="README.es.md">Leer en español</a></p>
 
 ---
 
-Si vienes de **Laragon** en Windows, esto es lo más parecido en Linux: cada
-proyecto con su dominio (`https://mi-app.local`), su versión de PHP y de Node,
-Apache o nginx, MariaDB/MySQL/PostgreSQL, phpMyAdmin, Mailpit y git integrado.
-Gratis y de código abierto.
+Coming from **Laragon** on Windows? This is the closest thing on Linux: every
+project gets its own domain (`https://my-app.local`), its own PHP and Node
+version, Apache or nginx, MariaDB/MySQL/PostgreSQL, phpMyAdmin, Mailpit and
+built-in git. Free and open source. Available in **English and Spanish**, with
+**light and dark** themes.
 
-## Instalación
+## Install
 
-En **Linux Mint 22 / Ubuntu 24.04** (o derivados de Ubuntu/Debian), abre una terminal y ejecuta:
+On **Linux Mint 22 / Ubuntu 24.04** (or other Ubuntu/Debian derivatives), open a terminal and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/instalar.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jaayala03/panel-ddev/main/install.sh | bash
 ```
 
-El instalador deja todo listo: **Docker**, **DDEV**, certificados HTTPS locales
-(**mkcert**) y **Panel DDEV**. Te pedirá tu contraseña de `sudo`.
+The installer sets up **Docker**, **DDEV**, local HTTPS certificates
+(**mkcert**) and **Panel DDEV**. It asks for your `sudo` password.
 
-Al terminar:
+When it finishes:
 
-1. **Cierra sesión y vuelve a entrar** (para usar Docker sin `sudo`).
-2. **Reinicia el navegador** (para que acepte los certificados HTTPS).
-3. Abre **Panel DDEV** desde el menú de aplicaciones.
+1. **Log out and back in** (to use Docker without `sudo`).
+2. **Restart your browser** (so it trusts the local HTTPS certificates).
+3. Open **Panel DDEV** from the applications menu.
 
 <details>
-<summary>Instalación manual (solo el paquete)</summary>
+<summary>Manual install (package only)</summary>
 
-Si ya tienes Docker y DDEV, descarga el `.deb` de la
-[última versión](https://github.com/jaayala03/panel-ddev/releases/latest) e instálalo:
+If you already have Docker and DDEV, download the `.deb` from the
+[latest release](https://github.com/jaayala03/panel-ddev/releases/latest) and install it:
 
 ```bash
 sudo apt install ./panel-ddev_*_all.deb
@@ -43,70 +46,80 @@ sudo apt install ./panel-ddev_*_all.deb
 </details>
 
 <details>
-<summary>Desde el código fuente</summary>
+<summary>From source</summary>
 
 ```bash
 git clone https://github.com/jaayala03/panel-ddev.git
 cd panel-ddev
-./panel-ddev                 # ejecutar sin instalar
-./instalar.sh --local        # o construir e instalar el paquete
+./panel-ddev                # run without installing
+./install.sh --local        # or build and install the package
 ```
 </details>
 
-### Desinstalar
+### Uninstall
 
 ```bash
 sudo apt remove panel-ddev
 ```
 
-(Docker, DDEV y tus proyectos no se tocan.)
+(Docker, DDEV and your projects are left untouched.)
 
-## Qué puedes hacer
+## Features
 
-- **Proyectos**: lista con su estado; iniciar, detener, reiniciar, apagar todo;
-  abrir en el navegador, la carpeta o tu editor.
-- **Nuevo proyecto**: tipo (PHP, Laravel, WordPress, Symfony, Drupal, CodeIgniter,
-  CakePHP, Craft CMS, Magento), versión de PHP y Node, Apache o nginx, base de
-  datos. Puede descargar el framework automáticamente.
-- **Clonar con git**: URL y rama; configura DDEV, arranca e instala dependencias
-  (`composer install`, `npm install`, `.env` y `APP_KEY` en Laravel).
-- **Cambiar configuración** de un proyecto existente (incluye migrar MariaDB ↔ MySQL).
-- **Herramientas**: terminal dentro del contenedor, logs en vivo, phpMyAdmin,
-  Mailpit, importar/exportar la base de datos.
-- **Git**: cambios con casillas para prepararlos, diferencias con colores,
-  historial, commit (Ctrl+Enter), ramas, fetch, pull y push.
+- **Projects**: list with status; start, stop, restart, stop all; open in the
+  browser, the folder or your editor.
+- **Tray icon**: start/stop projects and open their sites without the window;
+  optional start at login.
+- **New project**: type (PHP, Laravel, WordPress, Symfony, Drupal, CodeIgniter,
+  CakePHP, Craft CMS, Magento), PHP and Node version, Apache or nginx,
+  database. It can download the framework for you.
+- **Clone with git**: URL and branch; configures DDEV, starts the project and
+  installs dependencies (`composer install`, `npm install`, `.env` and
+  `APP_KEY` for Laravel).
+- **Change settings** of an existing project (including MariaDB ↔ MySQL migration).
+- **Tools**: shell inside the container, live logs, phpMyAdmin, Mailpit,
+  database import/export.
+- **Git**: changes with checkboxes to stage them, coloured diffs, history,
+  commit (Ctrl+Enter), branches, fetch, pull and push.
+- **Preferences**: English or Spanish, light, dark or system theme.
 
-Cada acción se ejecuta en una **terminal integrada**: ves exactamente qué
-comandos se lanzan, y si algo pide contraseña la escribes ahí mismo.
+Every action runs in an **embedded terminal**: you see exactly which commands
+run, and if something asks for a password you type it right there.
 
-## Requisitos
+## Requirements
 
-- Linux con `apt` (probado en Linux Mint 22.3 y Ubuntu 24.04).
-- 4 GB de RAM como mínimo (8 GB recomendado).
-- Conexión a internet la primera vez (descarga de imágenes de Docker, ~3 GB).
+- Linux with `apt` (tested on Linux Mint 22.3 and Ubuntu 24.04).
+- 4 GB of RAM minimum (8 GB recommended).
+- Internet connection the first time (Docker images, ~3 GB).
 
-## Para desarrolladores
+## For developers
 
-| Archivo | Para qué |
+| File | Purpose |
 |---|---|
-| `panel_ddev/app.py` | Ventana principal |
-| `panel_ddev/ddev.py` | Habla con `ddev` y genera los scripts de cada acción |
-| `panel_ddev/dialogs.py` | Diálogo de nuevo / clonar / configurar |
-| `panel_ddev/git.py` | Pestaña Git |
-| `panel_ddev/terminal.py` | Terminal integrada (VTE) |
-| `packaging/build-deb.sh` | Construye el `.deb` en `dist/` |
-| `instalar.sh` | Instalador completo |
+| `panel_ddev/app.py` | Main window and application |
+| `panel_ddev/ddev.py` | Talks to `ddev` and builds the script of each action |
+| `panel_ddev/dialogs.py` | New / clone / settings and preferences dialogs |
+| `panel_ddev/git.py` | Git tab |
+| `panel_ddev/tray.py` | Tray icon |
+| `panel_ddev/terminal.py` | Embedded terminal (VTE) |
+| `panel_ddev/i18n.py`, `locale_es.py` | Translations |
+| `panel_ddev/settings.py` | Preferences and theme |
+| `packaging/build-deb.sh` | Builds the `.deb` into `dist/` |
+| `packaging/check_translations.py` | Fails if a UI string has no translation |
+| `install.sh` | Full installer |
 
-Hecho con Python 3 y GTK 3 (PyGObject). Valores por defecto (PHP 8.4, Node 24,
-Apache, MariaDB 11.8) en `DEFAULTS` de `ddev.py`.
+Built with Python 3 and GTK 3 (PyGObject). Code, comments and commits are in
+English. UI strings are written in English and wrapped in `_()`; add the Spanish
+text to `panel_ddev/locale_es.py`.
 
-Para publicar una versión: sube `__version__` en `panel_ddev/__init__.py`,
-añade la entrada en `CHANGELOG.md`, ejecuta `packaging/build-deb.sh` y adjunta
-el `.deb` al release.
+To publish a release: bump `__version__` in `panel_ddev/__init__.py`, add the
+entry to `CHANGELOG.md`, run `packaging/build-deb.sh` and attach the `.deb` to
+the GitHub release.
 
-## Licencia y términos
+## License and terms
 
-- Código bajo licencia [MIT](LICENSE).
-- [Términos de uso y privacidad](TERMINOS.md): sin garantía; la app no recopila datos.
-- Panel DDEV es un proyecto **independiente**, no afiliado al proyecto
-  [DDEV](https://github.com/ddev/ddev) ni a Docker. Sus nombres son marcas de sus titulares.
+- Code under the [MIT](LICENSE) license.
+- [Terms of use and privacy](TERMS.md): no warranty; the app collects no data.
+- Panel DDEV is an **independent** project, not affiliated with the
+  [DDEV](https://github.com/ddev/ddev) project or Docker. Their names are
+  trademarks of their owners.

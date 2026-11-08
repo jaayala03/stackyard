@@ -1,4 +1,4 @@
-"""Pestaña Git: cambios, diferencias, historial, ramas, commit, pull y push."""
+"""Git tab: changes, diffs, history, branches, commit, pull and push."""
 
 import shlex
 import shutil
@@ -7,20 +7,24 @@ from pathlib import Path
 
 import gi
 
+gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
-MAX_DIFF = 400_000  # caracteres: evita congelar la ventana con diffs enormes
+from .i18n import _  # noqa: E402
 
+MAX_DIFF = 400_000  # characters: avoids freezing the window with huge diffs
+
+# status code -> (letter shown, description, colour)
 STATUS_INFO = {
-    "M": ("M", "Modificado", "#e5a50a"),
-    "A": ("A", "Añadido", "#2ec27e"),
-    "D": ("D", "Eliminado", "#e01b24"),
-    "R": ("R", "Renombrado", "#62a0ea"),
-    "C": ("C", "Copiado", "#62a0ea"),
-    "T": ("T", "Cambio de tipo", "#e5a50a"),
-    "?": ("N", "Nuevo (sin seguimiento)", "#2ec27e"),
-    "!": ("!", "Conflicto", "#e01b24"),
+    "M": ("M", "Modified", "#e5a50a"),
+    "A": ("A", "Added", "#2ec27e"),
+    "D": ("D", "Deleted", "#e01b24"),
+    "R": ("R", "Renamed", "#62a0ea"),
+    "C": ("C", "Copied", "#62a0ea"),
+    "T": ("T", "Type changed", "#e5a50a"),
+    "?": ("U", "Untracked (new)", "#2ec27e"),
+    "!": ("!", "Conflict", "#e01b24"),
 }
 
 
@@ -39,7 +43,7 @@ def run(cwd, *args, stdin=None, ok_codes=(0,)):
         cwd=cwd, input=stdin, capture_output=True, text=True, errors="replace",
     )
     if proc.returncode not in ok_codes:
-        raise GitError((proc.stderr or proc.stdout).strip() or f"git {args[0]} falló")
+        raise GitError((proc.stderr or proc.stdout).strip() or f"git {args[0]} failed")
     return proc.stdout
 
 
@@ -132,7 +136,7 @@ def file_diff(repo, f):
         return run(repo, "diff", "--no-index", "--", "/dev/null", f["path"], ok_codes=(0, 1))
     parts = []
     if f["staged"]:
-        parts.append(run(repo, "diff", "--cached", "-M", "--", f["path"], *( [f["orig"]] if f["orig"] else [])))
+        parts.append(run(repo, "diff", "--cached", "-M", "--", f["path"], *([f["orig"]] if f["orig"] else [])))
     if f["unstaged"]:
         parts.append(run(repo, "diff", "--", f["path"]))
     return "\n".join(p for p in parts if p)
@@ -169,15 +173,15 @@ def commit(repo, message):
     return run(repo, "commit", "-F", "-", stdin=message)
 
 
-# ===================================================================== interfaz
+# ===================================================================== UI
 def _diff_view():
     tv = Gtk.TextView(editable=False, cursor_visible=False, monospace=True, wrap_mode=Gtk.WrapMode.NONE)
     tv.set_left_margin(8)
     tv.set_top_margin(6)
     buf = tv.get_buffer()
-    buf.create_tag("add", foreground="#2ec27e")
-    buf.create_tag("del", foreground="#f66151")
-    buf.create_tag("hunk", foreground="#62a0ea")
+    buf.create_tag("add", foreground="#26a269")
+    buf.create_tag("del", foreground="#e01b24")
+    buf.create_tag("hunk", foreground="#3584e4")
     buf.create_tag("meta", weight=Pango.Weight.BOLD)
     buf.create_tag("dim", foreground="#9a9996")
     scroll = Gtk.ScrolledWindow()
@@ -185,14 +189,14 @@ def _diff_view():
     return scroll, tv
 
 
-def _set_diff(tv, text, empty="Sin diferencias."):
+def _set_diff(tv, text, empty=None):
     buf = tv.get_buffer()
     buf.set_text("")
     if not text.strip():
-        buf.insert_with_tags_by_name(buf.get_end_iter(), empty, "dim")
+        buf.insert_with_tags_by_name(buf.get_end_iter(), empty or _("No differences."), "dim")
         return
     if len(text) > MAX_DIFF:
-        text = text[:MAX_DIFF] + "\n\n… (diferencia recortada: es demasiado grande)\n"
+        text = text[:MAX_DIFF] + "\n\n… " + _("(diff truncated: it is too large)") + "\n"
     for line in text.splitlines(True):
         if line.startswith(("+++", "---", "diff --git", "index ", "new file", "deleted file", "similarity", "rename ", "commit ")):
             tag = "meta"
@@ -229,8 +233,8 @@ def _button(icon, label=None, tip=None):
 
 
 class GitView(Gtk.Box):
-    """Vista Git de un proyecto. `run_script(title, script, cwd, on_done)`
-    ejecuta comandos largos (pull, push…) en la terminal integrada."""
+    """Git view of a project. `run_script(title, script, on_done)` runs long
+    commands (pull, push…) in the embedded terminal."""
 
     def __init__(self, approot, run_script, window):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -239,70 +243,72 @@ class GitView(Gtk.Box):
         self.window = window
         self.repo = None
         self.files = []
+        self.state = {}
+        self.remotes = []
         self._selected_path = None
         self._building = False
         self._last_log_head = None
         self.build()
         self.refresh()
 
-    # ------------------------------------------------------------ construcción
+    # ------------------------------------------------------------ construction
     def build(self):
         for c in self.get_children():
             self.remove(c)
         self.repo = toplevel(self.approot) if git_installed() else None
         if not self.repo:
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER, vexpand=True)
-            lbl = Gtk.Label(label="Este proyecto no usa git todavía." if git_installed() else "git no está instalado.")
+            lbl = Gtk.Label(label=_("This project does not use git yet.") if git_installed() else _("git is not installed."))
             lbl.get_style_context().add_class("dim-label")
             box.pack_start(lbl, False, False, 0)
             if git_installed():
-                init = _button("list-add-symbolic", "Inicializar repositorio git")
+                init = _button("list-add-symbolic", _("Initialize git repository"))
                 init.connect("clicked", self.on_init)
                 box.pack_start(init, False, False, 0)
             self.pack_start(box, True, True, 0)
             self.show_all()
             return
 
-        # ---- barra: rama + sincronización
+        # ---- toolbar: branch + sync
         bar = Gtk.Box(spacing=6)
         bar.pack_start(Gtk.Image.new_from_icon_name("media-playlist-shuffle-symbolic", Gtk.IconSize.BUTTON), False, False, 0)
         self.branch_combo = Gtk.ComboBoxText()
-        self.branch_combo.set_tooltip_text("Cambiar de rama")
+        self.branch_combo.set_tooltip_text(_("Switch branch"))
         self.branch_combo.connect("changed", self.on_branch_changed)
         bar.pack_start(self.branch_combo, False, False, 0)
-        new_branch = _button("list-add-symbolic", tip="Nueva rama…")
+        new_branch = _button("list-add-symbolic", tip=_("New branch…"))
         new_branch.connect("clicked", self.on_new_branch)
         bar.pack_start(new_branch, False, False, 0)
         self.sync_label = Gtk.Label()
         self.sync_label.get_style_context().add_class("dim-label")
         bar.pack_start(self.sync_label, False, False, 8)
-        refresh = _button("view-refresh-symbolic", tip="Actualizar")
-        refresh.connect("clicked", lambda *_: self.refresh())
-        self.push_btn = _button("go-up-symbolic", "Push", "Subir tus commits (git push)")
+        refresh = _button("view-refresh-symbolic", tip=_("Refresh"))
+        refresh.connect("clicked", lambda *_a: self.refresh())
+        self.push_btn = _button("go-up-symbolic", "Push", _("Upload your commits (git push)"))
         self.push_btn.connect("clicked", self.on_push)
-        self.pull_btn = _button("go-down-symbolic", "Pull", "Traer cambios del remoto (git pull)")
+        self.pull_btn = _button("go-down-symbolic", "Pull", _("Bring changes from the remote (git pull)"))
         self.pull_btn.connect("clicked", self.on_pull)
-        self.fetch_btn = _button("emblem-synchronizing-symbolic", "Fetch", "Comprobar si hay cambios nuevos (git fetch)")
+        self.fetch_btn = _button("emblem-synchronizing-symbolic", "Fetch", _("Check for new changes (git fetch)"))
         self.fetch_btn.connect("clicked", self.on_fetch)
         for w in (refresh, self.push_btn, self.pull_btn, self.fetch_btn):
             bar.pack_end(w, False, False, 0)
         self.pack_start(bar, False, False, 0)
 
-        # ---- izquierda: cambios + commit
+        # ---- left: changes + commit
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         lhead = Gtk.Box(spacing=6)
         self.changes_title = Gtk.Label(xalign=0)
         lhead.pack_start(self.changes_title, True, True, 0)
-        add_all = _button("list-add-symbolic", tip="Preparar todos los cambios (git add -A)")
-        add_all.connect("clicked", lambda *_: self._safe(stage_all, self.repo))
-        rem_all = _button("list-remove-symbolic", tip="Quitar todos de la preparación")
-        rem_all.connect("clicked", lambda *_: self._safe(unstage_all, self.repo))
+        add_all = _button("list-add-symbolic", tip=_("Stage all changes (git add -A)"))
+        add_all.connect("clicked", lambda *_a: self._safe(stage_all, self.repo))
+        rem_all = _button("list-remove-symbolic", tip=_("Unstage all"))
+        rem_all.connect("clicked", lambda *_a: self._safe(unstage_all, self.repo))
         lhead.pack_end(rem_all, False, False, 0)
         lhead.pack_end(add_all, False, False, 0)
         left.pack_start(lhead, False, False, 0)
 
         self.changes = Gtk.ListBox()
-        self.changes.set_placeholder(self._dim("No hay cambios."))
+        self.changes.set_placeholder(self._dim(_("No changes.")))
         self.changes.connect("row-selected", self.on_file_selected)
         cs = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         cs.add(self.changes)
@@ -311,14 +317,14 @@ class GitView(Gtk.Box):
         self.message = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False)
         self.message.set_left_margin(6)
         self.message.set_top_margin(4)
-        self.message.set_tooltip_text("Mensaje del commit (Ctrl+Enter para hacer commit)")
+        self.message.set_tooltip_text(_("Commit message (Ctrl+Enter to commit)"))
         self.message.connect("key-press-event", self.on_message_key)
         ms = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         ms.set_size_request(-1, 64)
         ms.add(self.message)
         frame = Gtk.Frame()
         frame.add(ms)
-        hint = self._dim("Mensaje del commit")
+        hint = self._dim(_("Commit message"))
         hint.set_xalign(0)
         left.pack_start(hint, False, False, 0)
         left.pack_start(frame, False, False, 0)
@@ -327,13 +333,13 @@ class GitView(Gtk.Box):
         self.commit_btn.connect("clicked", self.on_commit)
         left.pack_start(self.commit_btn, False, False, 0)
 
-        # ---- derecha: diferencias + historial
+        # ---- right: diff + history
         self.tabs = Gtk.Notebook()
         dscroll, self.diff_tv = _diff_view()
-        self.tabs.append_page(dscroll, Gtk.Label(label="Diferencias"))
+        self.tabs.append_page(dscroll, Gtk.Label(label=_("Changes")))
         hist = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         self.commits = Gtk.ListBox()
-        self.commits.set_placeholder(self._dim("Todavía no hay commits."))
+        self.commits.set_placeholder(self._dim(_("No commits yet.")))
         self.commits.connect("row-selected", self.on_commit_selected)
         hs = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         hs.set_size_request(-1, 110)
@@ -342,9 +348,9 @@ class GitView(Gtk.Box):
         hist.pack1(hs, True, False)
         hist.pack2(cscroll, True, False)
         hist.set_position(140)
-        self.tabs.append_page(hist, Gtk.Label(label="Historial"))
-        _set_diff(self.diff_tv, "", "Selecciona un archivo de la lista para ver sus cambios.")
-        _set_diff(self.commit_tv, "", "Selecciona un commit para ver qué cambió.")
+        self.tabs.append_page(hist, Gtk.Label(label=_("History")))
+        _set_diff(self.diff_tv, "", _("Select a file from the list to see its changes."))
+        _set_diff(self.commit_tv, "", _("Select a commit to see what changed."))
 
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         left.set_size_request(260, -1)
@@ -360,7 +366,7 @@ class GitView(Gtk.Box):
         lbl.show()
         return lbl
 
-    # ------------------------------------------------------------ datos
+    # ------------------------------------------------------------ data
     def refresh(self):
         if not self.repo:
             if git_installed() and toplevel(self.approot):
@@ -372,11 +378,11 @@ class GitView(Gtk.Box):
             brs = branches(self.repo)
             self.remotes = remotes(self.repo)
         except GitError as exc:
-            self.changes_title.set_text(f"Error: {exc}"[:80])
+            self.changes_title.set_text(_("Error: {error}").format(error=exc)[:80])
             return
         self.state = st
 
-        # ramas
+        # branches
         self._building = True
         self.branch_combo.remove_all()
         current = st["branch"]
@@ -387,25 +393,27 @@ class GitView(Gtk.Box):
                 self.branch_combo.append(current, current)
                 self.branch_combo.set_active_id(current)
         else:
-            self.branch_combo.append("__detached__", "(sin rama)")
+            self.branch_combo.append("__detached__", _("(no branch)"))
             self.branch_combo.set_active_id("__detached__")
         self._building = False
 
-        # sincronización
+        # sync status
         if not self.remotes:
-            self.sync_label.set_text("sin remoto")
+            self.sync_label.set_text(_("no remote"))
         elif not st["upstream"]:
-            self.sync_label.set_text("rama sin publicar")
+            self.sync_label.set_text(_("branch not published"))
         else:
             self.sync_label.set_text(f"↑{st['ahead']}  ↓{st['behind']}  · {st['upstream']}")
         for b in (self.push_btn, self.pull_btn, self.fetch_btn):
             b.set_sensitive(bool(self.remotes))
         self.pull_btn.set_sensitive(bool(self.remotes and st["upstream"]))
 
-        # cambios
+        # changes
         self.files = st["files"]
         staged = sum(1 for f in self.files if f["staged"])
-        self.changes_title.set_markup(f"<b>Cambios</b> ({len(self.files)}) · {staged} preparados")
+        self.changes_title.set_markup(
+            _("<b>Changes</b> ({total}) · {staged} staged").format(total=len(self.files), staged=staged)
+        )
         for row in self.changes.get_children():
             self.changes.remove(row)
         select = None
@@ -419,10 +427,10 @@ class GitView(Gtk.Box):
             self.changes.select_row(select)
         elif self._selected_path:
             self._selected_path = None
-            _set_diff(self.diff_tv, "", "Selecciona un archivo de la lista para ver sus cambios.")
+            _set_diff(self.diff_tv, "", _("Select a file from the list to see its changes."))
         self.commit_btn.set_sensitive(bool(self.files))
 
-        # historial (solo se recarga si cambió HEAD)
+        # history (only reloaded when HEAD moved)
         head = None
         try:
             head = run(self.repo, "rev-parse", "-q", "--verify", "HEAD", ok_codes=(0, 1)).strip()
@@ -439,13 +447,13 @@ class GitView(Gtk.Box):
         check = Gtk.CheckButton()
         check.set_active(f["staged"])
         check.set_inconsistent(f["staged"] and f["unstaged"] and f["code"] != "?")
-        check.set_tooltip_text("Preparado para el commit" if f["staged"] else "Marcar para incluir en el commit")
+        check.set_tooltip_text(_("Staged for the commit") if f["staged"] else _("Check to include it in the commit"))
         check.connect("toggled", self.on_toggle, f)
         box.pack_start(check, False, False, 0)
         letter, desc, color = STATUS_INFO.get(f["code"], (f["code"], f["code"], "#9a9996"))
         code = Gtk.Label()
         code.set_markup(f'<span foreground="{color}" weight="bold">{letter}</span>')
-        code.set_tooltip_text(desc)
+        code.set_tooltip_text(_(desc))
         code.set_width_chars(2)
         box.pack_start(code, False, False, 0)
         p = Path(f["path"])
@@ -453,7 +461,7 @@ class GitView(Gtk.Box):
         parent = "" if str(p.parent) == "." else f'  <span size="small" foreground="#9a9996">{GLib.markup_escape_text(str(p.parent))}</span>'
         strike = ' strikethrough="true"' if f["code"] == "D" else ""
         name.set_markup(f"<span{strike}>{GLib.markup_escape_text(p.name)}</span>{parent}")
-        name.set_tooltip_text(f["path"] + (f"  (antes: {f['orig']})" if f["orig"] else ""))
+        name.set_tooltip_text(f["path"] + (_("  (was: {path})").format(path=f["orig"]) if f["orig"] else ""))
         box.pack_start(name, True, True, 0)
         row.add(box)
         return row
@@ -474,7 +482,7 @@ class GitView(Gtk.Box):
             top.pack_start(subj, True, True, 0)
             if c["refs"]:
                 refs = Gtk.Label()
-                refs.set_markup(f'<span size="small" foreground="#62a0ea">{GLib.markup_escape_text(c["refs"])}</span>')
+                refs.set_markup(f'<span size="small" foreground="#3584e4">{GLib.markup_escape_text(c["refs"])}</span>')
                 top.pack_end(refs, False, False, 0)
             meta = Gtk.Label(xalign=0)
             meta.set_markup(
@@ -487,12 +495,12 @@ class GitView(Gtk.Box):
             self.commits.add(row)
         self.commits.show_all()
 
-    # ------------------------------------------------------------ eventos
+    # ------------------------------------------------------------ events
     def _safe(self, fn, *args):
         try:
             fn(*args)
         except GitError as exc:
-            self._error("git devolvió un error", str(exc))
+            self._error(_("git returned an error"), str(exc))
         self.refresh()
 
     def _error(self, title, text):
@@ -504,15 +512,15 @@ class GitView(Gtk.Box):
     def _ask(self, title, text, ok):
         dlg = Gtk.MessageDialog(transient_for=self.window, modal=True, message_type=Gtk.MessageType.QUESTION, text=title)
         dlg.format_secondary_text(text)
-        dlg.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dlg.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
         dlg.add_button(ok, Gtk.ResponseType.OK).get_style_context().add_class("suggested-action")
         r = dlg.run()
         dlg.destroy()
         return r == Gtk.ResponseType.OK
 
-    def on_toggle(self, check, f):
+    def on_toggle(self, _check, f):
         fully_staged = f["staged"] and not (f["unstaged"] and f["code"] != "?")
-        # se difiere: refresh() reconstruye la fila que está emitiendo la señal
+        # deferred: refresh() rebuilds the row that is emitting the signal
         GLib.idle_add(lambda: self._safe(unstage if fully_staged else stage, self.repo, f) and False)
 
     def on_file_selected(self, _lb, row):
@@ -534,32 +542,30 @@ class GitView(Gtk.Box):
                 _set_diff(self.commit_tv, "", str(exc))
 
     def on_message_key(self, _w, event):
-        from gi.repository import Gdk
-
         if event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and event.state & Gdk.ModifierType.CONTROL_MASK:
             self.on_commit()
             return True
         return False
 
-    def on_commit(self, *_):
+    def on_commit(self, *_a):
         buf = self.message.get_buffer()
         msg = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
         if not msg:
-            self._error("Falta el mensaje", "Escribe qué cambiaste antes de hacer commit.")
+            self._error(_("Missing message"), _("Describe what you changed before committing."))
             self.message.grab_focus()
             return
         if not any(f["staged"] for f in self.files):
-            if not self._ask("No hay cambios preparados", "¿Incluir todos los cambios en este commit?", "Incluir todo y commit"):
+            if not self._ask(_("Nothing is staged"), _("Include all changes in this commit?"), _("Include all and commit")):
                 return
             try:
                 stage_all(self.repo)
             except GitError as exc:
-                self._error("No se pudieron preparar los cambios", str(exc))
+                self._error(_("Could not stage the changes"), str(exc))
                 return
         try:
             commit(self.repo, msg + "\n")
         except GitError as exc:
-            self._error("No se pudo hacer el commit", str(exc))
+            self._error(_("Could not commit"), str(exc))
             self.refresh()
             return
         buf.set_text("")
@@ -574,42 +580,45 @@ class GitView(Gtk.Box):
             f"cd {q(self.repo)}\n"
             f"printf '\\n\\033[1;36m==> %s\\033[0m\\n' {q(title)}\n"
             f"{cmd}\n"
-            "printf '\\n\\033[1;32m✔ Hecho\\033[0m\\n'\n"
+            f"printf '\\n\\033[1;32m✔ %s\\033[0m\\n' {q(_('Done'))}\n"
         )
 
     def _run(self, title, cmd):
         name = Path(self.approot).name
-        self.run_script(f"{name}: {title}", self._git_script(title, cmd), lambda *_: self.refresh())
+        self.run_script(f"{name}: {title}", self._git_script(title, cmd), lambda *_a: self.refresh())
 
-    def on_push(self, *_):
-        st = self.state
-        if st["upstream"]:
+    def on_push(self, *_a):
+        if self.state["upstream"]:
             self._run("git push", "git push")
         else:
             remote = "origin" if "origin" in self.remotes else self.remotes[0]
-            self._run(f"git push (publicar rama en {remote})", f"git push -u {shlex.quote(remote)} HEAD")
+            self._run(
+                _("git push (publish branch to {remote})").format(remote=remote),
+                f"git push -u {shlex.quote(remote)} HEAD",
+            )
 
-    def on_pull(self, *_):
-        self._run("git pull", "git pull --ff-only || { echo; echo 'No se pudo hacer pull automático (hay cambios divergentes o sin guardar).'; exit 1; }")
+    def on_pull(self, *_a):
+        failed = _("Could not pull automatically (diverged or uncommitted changes).")
+        self._run("git pull", f"git pull --ff-only || {{ echo; echo {shlex.quote(failed)}; exit 1; }}")
 
-    def on_fetch(self, *_):
+    def on_fetch(self, *_a):
         self._run("git fetch", "git fetch --all --prune")
 
-    def on_branch_changed(self, combo):
+    def on_branch_changed(self, box):
         if self._building:
             return
-        target = combo.get_active_id()
+        target = box.get_active_id()
         if not target or target == "__detached__" or target == self.state.get("branch"):
             return
-        self._run(f"cambiar a la rama {target}", f"git switch {shlex.quote(target)}")
+        self._run(_("switch to branch {branch}").format(branch=target), f"git switch {shlex.quote(target)}")
 
-    def on_new_branch(self, *_):
-        dlg = Gtk.Dialog(title="Nueva rama", transient_for=self.window, modal=True)
-        dlg.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-        ok = dlg.add_button("Crear y cambiar", Gtk.ResponseType.OK)
+    def on_new_branch(self, *_a):
+        dlg = Gtk.Dialog(title=_("New branch"), transient_for=self.window, modal=True)
+        dlg.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        ok = dlg.add_button(_("Create and switch"), Gtk.ResponseType.OK)
         ok.get_style_context().add_class("suggested-action")
         dlg.set_default_response(Gtk.ResponseType.OK)
-        entry = Gtk.Entry(placeholder_text="feature/mi-cambio", activates_default=True, margin=14)
+        entry = Gtk.Entry(placeholder_text="feature/my-change", activates_default=True, margin=14)
         dlg.get_content_area().add(entry)
         dlg.show_all()
         name = entry.get_text().strip() if dlg.run() == Gtk.ResponseType.OK else ""
@@ -618,15 +627,15 @@ class GitView(Gtk.Box):
             try:
                 run(self.repo, "check-ref-format", "--branch", name)
             except GitError:
-                self._error("Nombre de rama no válido", name)
+                self._error(_("Invalid branch name"), name)
                 return
             self._safe(run, self.repo, "switch", "-c", name)
 
-    def on_init(self, *_):
+    def on_init(self, *_a):
         try:
             run(self.approot, "init", "-q")
         except GitError as exc:
-            self._error("No se pudo inicializar git", str(exc))
+            self._error(_("Could not initialize git"), str(exc))
             return
         self.build()
         self.refresh()

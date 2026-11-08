@@ -1,4 +1,4 @@
-"""Diálogo para crear, clonar o editar un proyecto."""
+"""Dialogs: create / clone / edit a project, and preferences."""
 
 from pathlib import Path
 
@@ -7,31 +7,32 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-from . import ddev  # noqa: E402
+from . import ddev, settings  # noqa: E402
+from .i18n import _  # noqa: E402
 
 
-def _combo(options, active):
-    combo = Gtk.ComboBoxText()
-    for value, label, *_ in options:
-        combo.append(value, label)
-    if not combo.set_active_id(active):
-        combo.set_active(0)
-    return combo
+def combo(options, active, translate=True):
+    box = Gtk.ComboBoxText()
+    for value, label, *_rest in options:
+        box.append(value, _(label) if translate else label)
+    if not box.set_active_id(active):
+        box.set_active(0)
+    return box
 
 
 class ProjectDialog(Gtk.Dialog):
-    """mode: 'new', 'clone' o 'edit'."""
+    """mode: 'new', 'clone' or 'edit'."""
 
-    TITLES = {"new": "Nuevo proyecto", "clone": "Clonar proyecto con git", "edit": "Configuración del proyecto"}
-    OK = {"new": "Crear", "clone": "Clonar y crear", "edit": "Aplicar y reiniciar"}
+    TITLES = {"new": "New project", "clone": "Clone a project with git", "edit": "Project settings"}
+    OK = {"new": "Create", "clone": "Clone and create", "edit": "Apply and restart"}
 
     def __init__(self, parent, mode, project=None):
-        super().__init__(title=self.TITLES[mode], transient_for=parent, modal=True)
+        super().__init__(title=_(self.TITLES[mode]), transient_for=parent, modal=True)
         self.mode = mode
         self.project = project or {}
         self.set_default_size(520, -1)
-        self.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-        self.ok_btn = self.add_button(self.OK[mode], Gtk.ResponseType.OK)
+        self.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        self.ok_btn = self.add_button(_(self.OK[mode]), Gtk.ResponseType.OK)
         self.ok_btn.get_style_context().add_class("suggested-action")
         self.set_default_response(Gtk.ResponseType.OK)
         self._docroot_touched = False
@@ -39,97 +40,79 @@ class ProjectDialog(Gtk.Dialog):
 
         grid = Gtk.Grid(column_spacing=12, row_spacing=10, margin=18)
         self.get_content_area().add(grid)
+        self.grid = grid
         self._row = 0
 
-        def add(label, widget, hint=None):
-            lbl = Gtk.Label(label=label, xalign=1)
-            lbl.get_style_context().add_class("dim-label")
-            grid.attach(lbl, 0, self._row, 1, 1)
-            widget.set_hexpand(True)
-            grid.attach(widget, 1, self._row, 1, 1)
-            self._row += 1
-            if hint:
-                h = Gtk.Label(label=hint, xalign=0, wrap=True, max_width_chars=50)
-                h.get_style_context().add_class("dim-label")
-                grid.attach(h, 1, self._row, 1, 1)
-                self._row += 1
-
-        def section(text):
-            lbl = Gtk.Label(xalign=0, margin_top=6 if self._row else 0)
-            lbl.set_markup(f"<b>{text}</b>")
-            grid.attach(lbl, 0, self._row, 2, 1)
-            self._row += 1
-
         p = self.project
-        # ---------- origen
+        # ---------- source
         if mode == "clone":
-            section("Repositorio")
-            self.repo = Gtk.Entry(placeholder_text="https://github.com/usuario/proyecto.git")
+            self._section(_("Repository"))
+            self.repo = Gtk.Entry(placeholder_text="https://github.com/user/project.git")
             self.repo.connect("changed", self._on_repo_changed)
-            add("URL", self.repo)
-            self.branch = Gtk.Entry(placeholder_text="la rama por defecto")
-            add("Rama", self.branch)
+            self._add(_("URL"), self.repo)
+            self.branch = Gtk.Entry(placeholder_text=_("the default branch"))
+            self._add(_("Branch"), self.branch)
 
         if mode != "edit":
-            section("Proyecto")
-            self.name = Gtk.Entry(placeholder_text="mi-proyecto")
+            self._section(_("Project"))
+            self.name = Gtk.Entry(placeholder_text="my-project")
             self.name.connect("changed", self._on_name_changed)
-            add("Nombre", self.name)
+            self._add(_("Name"), self.name)
             self.parent_dir = Gtk.FileChooserButton(
-                title="Carpeta donde guardar el proyecto",
+                title=_("Folder where the project is saved"),
                 action=Gtk.FileChooserAction.SELECT_FOLDER,
             )
             ddev.DEFAULT_PARENT.mkdir(exist_ok=True)
             self.parent_dir.set_filename(str(ddev.DEFAULT_PARENT))
-            self.parent_dir.connect("file-set", lambda *_: self._validate())
-            add("Guardar en", self.parent_dir)
+            self.parent_dir.connect("file-set", lambda *_a: self._validate())
+            self._add(_("Save in"), self.parent_dir)
             self.summary = Gtk.Label(xalign=0, selectable=True)
             self.summary.get_style_context().add_class("dim-label")
             grid.attach(self.summary, 1, self._row, 1, 1)
             self._row += 1
 
-        # ---------- entorno
-        section("Entorno")
+        # ---------- environment
+        self._section(_("Environment"))
         types = ([ddev.AUTO_TYPE] if mode == "clone" else []) + ddev.PROJECT_TYPES
         current_type = p.get("cfg_type") or p.get("type") or ("" if mode == "clone" else "php")
-        self.type = _combo(types, current_type)
+        self.type = combo(types, current_type)
         self.type.connect("changed", self._on_type_changed)
-        add("Tipo", self.type)
-        self.docroot = Gtk.Entry(placeholder_text="raíz del proyecto")
+        self._add(_("Type"), self.type)
+        self.docroot = Gtk.Entry(placeholder_text=_("project root"))
         self.docroot.set_text(p.get("cfg_docroot", "") if mode == "edit" else "")
-        self.docroot.connect("changed", lambda *_: setattr(self, "_docroot_touched", True))
-        add("Carpeta pública", self.docroot, "La carpeta que se sirve en la web (p. ej. public).")
-        self.php = _combo([(v, f"PHP {v}") for v in ddev.PHP_VERSIONS], p.get("cfg_php") or ddev.DEFAULTS["php"])
-        add("PHP", self.php)
-        self.node = _combo([(v, f"Node {v}") for v in ddev.NODE_VERSIONS], p.get("cfg_node") or ddev.DEFAULTS["node"])
-        add("Node", self.node)
-        self.webserver = _combo(ddev.WEBSERVERS, p.get("cfg_webserver") or ddev.DEFAULTS["webserver"])
-        add("Servidor web", self.webserver)
+        self.docroot.connect("changed", lambda *_a: setattr(self, "_docroot_touched", True))
+        self._add(_("Public folder"), self.docroot, _("The folder served on the web (e.g. public)."))
+        self.php = combo([(v, f"PHP {v}") for v in ddev.PHP_VERSIONS], p.get("cfg_php") or ddev.DEFAULTS["php"], False)
+        self._add("PHP", self.php)
+        self.node = combo([(v, f"Node {v}") for v in ddev.NODE_VERSIONS], p.get("cfg_node") or ddev.DEFAULTS["node"], False)
+        self._add("Node", self.node)
+        self.webserver = combo(ddev.WEBSERVERS, p.get("cfg_webserver") or ddev.DEFAULTS["webserver"], False)
+        self._add(_("Web server"), self.webserver)
         self.old_db = p.get("cfg_db", "")
         db_opts = list(ddev.DATABASES)
         if self.old_db and self.old_db not in [d[0] for d in db_opts]:
             db_opts.insert(0, (self.old_db, self.old_db))
-        self.db = _combo(db_opts, self.old_db or ddev.DEFAULTS["db"])
-        add(
-            "Base de datos",
+        self.db = combo(db_opts, self.old_db or ddev.DEFAULTS["db"], False)
+        self._add(
+            _("Database"),
             self.db,
-            "Cambiarla migra tus datos (MariaDB ↔ MySQL). Con PostgreSQL no se puede migrar."
+            _("Changing it migrates your data (MariaDB ↔ MySQL). PostgreSQL cannot be migrated.")
             if mode == "edit" else None,
         )
 
-        # ---------- opciones
+        # ---------- options
         if mode != "edit":
-            section("Opciones")
+            self._section(_("Options"))
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             if mode == "new":
                 self.scaffold = Gtk.CheckButton()
                 box.pack_start(self.scaffold, False, False, 0)
             else:
-                self.deps = Gtk.CheckButton(label="Instalar dependencias (composer install, npm install)", active=True)
+                self.deps = Gtk.CheckButton(label=_("Install dependencies (composer install, npm install)"), active=True)
                 box.pack_start(self.deps, False, False, 0)
-            self.pma = Gtk.CheckButton(label="Añadir phpMyAdmin")
+            self.pma = Gtk.CheckButton(label=_("Add phpMyAdmin"))
             box.pack_start(self.pma, False, False, 0)
-            self.launch = Gtk.CheckButton(label="Abrir en el navegador al terminar", active=True)
+            self.launch = Gtk.CheckButton(label=_("Open in the browser when done"), active=True)
             box.pack_start(self.launch, False, False, 0)
             grid.attach(box, 0, self._row, 2, 1)
             self._row += 1
@@ -145,7 +128,27 @@ class ProjectDialog(Gtk.Dialog):
             self.repo.grab_focus()
         self._validate()
 
-    # ------------------------------------------------------------ eventos
+    # ------------------------------------------------------------ layout helpers
+    def _add(self, label, widget, hint=None):
+        lbl = Gtk.Label(label=label, xalign=1)
+        lbl.get_style_context().add_class("dim-label")
+        self.grid.attach(lbl, 0, self._row, 1, 1)
+        widget.set_hexpand(True)
+        self.grid.attach(widget, 1, self._row, 1, 1)
+        self._row += 1
+        if hint:
+            h = Gtk.Label(label=hint, xalign=0, wrap=True, max_width_chars=50)
+            h.get_style_context().add_class("dim-label")
+            self.grid.attach(h, 1, self._row, 1, 1)
+            self._row += 1
+
+    def _section(self, text):
+        lbl = Gtk.Label(xalign=0, margin_top=6 if self._row else 0)
+        lbl.set_markup(f"<b>{text}</b>")
+        self.grid.attach(lbl, 0, self._row, 2, 1)
+        self._row += 1
+
+    # ------------------------------------------------------------ events
     def _on_repo_changed(self, entry):
         if not self._name_touched:
             self.name.handler_block_by_func(self._on_name_changed)
@@ -157,24 +160,24 @@ class ProjectDialog(Gtk.Dialog):
         self._name_touched = True
         self._validate()
 
-    def _on_type_changed(self, combo, initial=False):
-        t = combo.get_active_id() or ""
+    def _on_type_changed(self, box, initial=False):
+        t = box.get_active_id() or ""
         if not (initial and self.mode == "edit") and not self._docroot_touched:
             default = next((d for v, _l, d in ddev.PROJECT_TYPES if v == t), "")
-            self.docroot.set_text(default)  # dispara «changed»…
-            self._docroot_touched = False  # …pero no cuenta como edición del usuario
+            self.docroot.set_text(default)  # fires "changed"…
+            self._docroot_touched = False  # …but it is not a user edit
         self.docroot.set_sensitive(t != "")
         if self.mode == "new":
-            scaffold = ddev.SCAFFOLD.get(t)
-            label = ddev.label_for(ddev.PROJECT_TYPES, t)
+            framework = ddev.label_for(ddev.PROJECT_TYPES, t)
             self.scaffold.set_label(
-                f"Descargar e instalar {label} nuevo" if scaffold else "Crear un index.php de prueba"
+                _("Download and install a fresh {framework}").format(framework=framework)
+                if ddev.SCAFFOLD.get(t) else _("Create a test index.php")
             )
             self.scaffold.set_active(True)
             self.scaffold.set_visible(t != "generic")
         self._validate()
 
-    # ------------------------------------------------------------ validación
+    # ------------------------------------------------------------ validation
     def _target(self):
         parent = self.parent_dir.get_filename() or str(ddev.DEFAULT_PARENT)
         return Path(parent) / self.name.get_text().strip()
@@ -185,13 +188,13 @@ class ProjectDialog(Gtk.Dialog):
             name = self.name.get_text().strip()
             target = self._target()
             if self.mode == "clone" and not self.repo.get_text().strip():
-                msg = "Escribe la URL del repositorio."
+                msg = _("Enter the repository URL.")
             elif not name:
-                msg = "Escribe un nombre para el proyecto."
+                msg = _("Enter a name for the project.")
             elif not ddev.NAME_RE.match(name):
-                msg = "El nombre solo puede tener minúsculas, números y guiones."
+                msg = _("The name can only contain lowercase letters, numbers and hyphens.")
             elif target.exists() and any(target.iterdir()):
-                msg = f"La carpeta {target} ya existe y no está vacía."
+                msg = _("The folder {path} already exists and is not empty.").format(path=target)
             if name and ddev.NAME_RE.match(name):
                 self.summary.set_text(f"{target}\nhttps://{name}.{ddev.project_tld()}")
             else:
@@ -199,7 +202,7 @@ class ProjectDialog(Gtk.Dialog):
         self.error.set_markup(f'<span foreground="#e01b24">{msg}</span>' if msg else "")
         self.ok_btn.set_sensitive(not msg)
 
-    # ------------------------------------------------------------ resultado
+    # ------------------------------------------------------------ result
     def options(self):
         o = {
             "mode": self.mode,
@@ -226,3 +229,26 @@ class ProjectDialog(Gtk.Dialog):
                 deps=self.deps.get_active(),
             )
         return o
+
+
+class PreferencesDialog(Gtk.Dialog):
+    def __init__(self, parent, values):
+        super().__init__(title=_("Preferences"), transient_for=parent, modal=True)
+        self.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        ok = self.add_button(_("Save"), Gtk.ResponseType.OK)
+        ok.get_style_context().add_class("suggested-action")
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10, margin=18)
+        self.get_content_area().add(grid)
+
+        self.language = combo(settings.LANGUAGES, values.get("language", "auto"))
+        self.theme = combo(settings.THEMES, values.get("theme", "system"))
+        for row, (label, widget) in enumerate(((_("Language"), self.language), (_("Appearance"), self.theme))):
+            lbl = Gtk.Label(label=label, xalign=1)
+            lbl.get_style_context().add_class("dim-label")
+            grid.attach(lbl, 0, row, 1, 1)
+            widget.set_hexpand(True)
+            grid.attach(widget, 1, row, 1, 1)
+        self.show_all()
+
+    def values(self):
+        return {"language": self.language.get_active_id(), "theme": self.theme.get_active_id()}

@@ -1,6 +1,6 @@
 # Términos de uso
 
-Última actualización: 7 de noviembre de 2026
+Última actualización: 7 de noviembre de 2026 · [English version](TERMS.md)
 
 Al descargar, instalar o usar **Panel DDEV** («la aplicación») aceptas estos términos.
 Si no estás de acuerdo, no la uses.

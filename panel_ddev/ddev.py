@@ -1,5 +1,5 @@
-"""Capa que habla con DDEV: listar proyectos, leer su configuración y
-construir los scripts de bash que se ejecutan en la terminal integrada."""
+"""Talks to DDEV: lists projects, reads their config and builds the bash
+scripts that run in the embedded terminal."""
 
 import grp
 import json
@@ -12,10 +12,12 @@ from pathlib import Path
 
 import yaml
 
-HOME = Path.home()
-DEFAULT_PARENT = HOME / "proyectos"
+from .i18n import _
 
-# (valor para ddev, etiqueta, docroot por defecto)
+HOME = Path.home()
+DEFAULT_PARENT = HOME / "proyectos" if (HOME / "proyectos").exists() else HOME / "projects"
+
+# (ddev value, label, default docroot)
 PROJECT_TYPES = [
     ("php", "PHP", ""),
     ("laravel", "Laravel", "public"),
@@ -26,11 +28,11 @@ PROJECT_TYPES = [
     ("cakephp", "CakePHP", "webroot"),
     ("craftcms", "Craft CMS", "web"),
     ("magento2", "Magento 2", "pub"),
-    ("generic", "Genérico (sin PHP)", ""),
+    ("generic", "Generic (no PHP)", ""),
 ]
-AUTO_TYPE = ("", "Detectar automáticamente", "")
+AUTO_TYPE = ("", "Detect automatically", "")
 
-# Comando que crea el proyecto desde cero para cada tipo
+# Command that creates a brand-new project of each type
 SCAFFOLD = {
     "laravel": "ddev composer create-project laravel/laravel",
     "wordpress": "ddev start && ddev wp core download",
@@ -73,8 +75,8 @@ def ddev_installed():
 
 
 def _docker_group_active():
-    """Tras añadir al usuario al grupo docker hay que reiniciar sesión.
-    Mientras tanto, usamos `sg docker` para no necesitar sudo."""
+    """After adding the user to the docker group a new login is needed.
+    Until then we go through `sg docker` so sudo is not required."""
     try:
         gid = grp.getgrnam("docker").gr_gid
     except KeyError:
@@ -83,7 +85,7 @@ def _docker_group_active():
 
 
 def shell_argv(command):
-    """argv para ejecutar una línea de bash con acceso a Docker."""
+    """argv that runs a bash command line with Docker access."""
     if _docker_group_active():
         return ["bash", "-c", command]
     return ["sg", "docker", "-c", "bash -c " + shlex.quote(command)]
@@ -103,7 +105,7 @@ def _run_json(command, cwd=None, timeout=60):
             continue
         if "raw" in data:
             return data["raw"]
-    raise DdevError((proc.stderr or proc.stdout).strip() or "ddev no devolvió datos")
+    raise DdevError((proc.stderr or proc.stdout).strip() or "ddev returned no data")
 
 
 def list_projects():
@@ -115,7 +117,7 @@ def list_projects():
 
 
 def read_config(approot):
-    """Lee .ddev/config.yaml (funciona aunque el proyecto esté parado)."""
+    """Reads .ddev/config.yaml (works even when the project is stopped)."""
     cfg = {}
     path = Path(approot) / ".ddev" / "config.yaml"
     try:
@@ -160,27 +162,35 @@ def name_from_repo(url):
 
 
 def label_for(options, value):
-    for v, label, *_ in options:
+    """Translated label of `value` in a list of (value, label, ...) tuples."""
+    for v, label, *_rest in options:
         if v == value:
-            return label
+            return _(label)
     return value or "—"
 
 
 # ---------------------------------------------------------------- scripts
 
-_HEADER = r"""set -eo pipefail
-paso() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
-ok()   { printf '\n\033[1;32m✔ %s\033[0m\n' "$*"; }
-trap 'printf "\n\033[1;31m✘ Algo falló. Revisa los mensajes de arriba.\033[0m\n"' ERR
-"""
-
-
 def _q(v):
     return shlex.quote(str(v))
 
 
-def _paso(text):
-    return f"paso {_q(text)}"
+def _header():
+    failed = _("Something went wrong. Check the messages above.")
+    return (
+        "set -eo pipefail\n"
+        "step() { printf '\\n\\033[1;36m==> %s\\033[0m\\n' \"$*\"; }\n"
+        "ok()   { printf '\\n\\033[1;32m✔ %s\\033[0m\\n' \"$*\"; }\n"
+        f"trap 'printf \"\\n\\033[1;31m✘ %s\\033[0m\\n\" {_q(failed)}' ERR\n"
+    )
+
+
+def _step(text):
+    return f"step {_q(text)}"
+
+
+def _ok(text):
+    return f"ok {_q(text)}"
 
 
 def _config_flags(o, include_name=True):
@@ -204,82 +214,81 @@ def script_create(o):
     """o: mode('new'|'clone'), name, path, repo, branch, type, docroot, php,
     node, webserver, db, scaffold, deps, phpmyadmin, launch."""
     path = o["path"]
-    s = [_HEADER]
+    s = [_header()]
     if o["mode"] == "clone":
         branch = f"--branch {_q(o['branch'])} " if o.get("branch") else ""
-        s.append(_paso(f"Clonando {o['repo']}"))
+        s.append(_step(_("Cloning {repo}").format(repo=o["repo"])))
         s.append(f"git clone {branch}{_q(o['repo'])} {_q(path)}")
         s.append(f"cd {_q(path)}")
     else:
-        s.append(_paso(f"Creando la carpeta {path}"))
+        s.append(_step(_("Creating folder {path}").format(path=path)))
         s.append(f"mkdir -p {_q(path)} && cd {_q(path)}")
 
-    s.append(_paso("Configurando DDEV"))
+    s.append(_step(_("Configuring DDEV")))
     s.append(f"ddev config {_config_flags(o)}")
 
     if o["mode"] == "new":
         scaffold = SCAFFOLD.get(o.get("type")) if o.get("scaffold") else None
         if scaffold:
-            s.append(_paso(f"Instalando {label_for(PROJECT_TYPES, o['type'])}"))
+            s.append(_step(_("Installing {framework}").format(framework=label_for(PROJECT_TYPES, o["type"]))))
             s.append(scaffold)
-        elif o.get("type") not in ("generic",):
+        elif o.get("type") != "generic":
             docroot = o.get("docroot") or "."
             s.append(f"mkdir -p {_q(docroot)}")
             s.append(
                 f"[ -e {_q(docroot)}/index.php ] || printf '%s\\n' "
                 f"{_q('<?php phpinfo();')} > {_q(docroot)}/index.php"
             )
-    else:
-        if o.get("deps"):
-            s.append(
-                "if [ -f artisan ] && [ ! -f .env ] && [ -f .env.example ]; then "
-                "paso 'Creando .env a partir de .env.example'; cp .env.example .env; fi"
-            )
+    elif o.get("deps"):
+        s.append(
+            "if [ -f artisan ] && [ ! -f .env ] && [ -f .env.example ]; then "
+            f"{_step(_('Creating .env from .env.example'))}; cp .env.example .env; fi"
+        )
 
     if o.get("phpmyadmin"):
-        s.append(_paso("Añadiendo phpMyAdmin"))
+        s.append(_step(_("Adding phpMyAdmin")))
         s.append("ddev add-on get ddev/ddev-phpmyadmin")
 
-    s.append(_paso("Arrancando el proyecto (puede pedir tu contraseña para el dominio)"))
+    s.append(_step(_("Starting the project (it may ask for your password to add the domain)")))
     s.append("ddev start")
 
     if o["mode"] == "clone" and o.get("deps"):
-        s.append("if [ -f composer.json ]; then paso 'composer install'; ddev composer install; fi")
+        s.append(f"if [ -f composer.json ]; then {_step('composer install')}; ddev composer install; fi")
         s.append(
             "if [ -f artisan ] && ! grep -q '^APP_KEY=.\\+' .env 2>/dev/null; then "
-            "paso 'Generando APP_KEY'; ddev artisan key:generate; fi"
+            f"{_step(_('Generating APP_KEY'))}; ddev artisan key:generate; fi"
         )
-        s.append("if [ -f package.json ]; then paso 'npm install'; ddev npm install; fi")
+        s.append(f"if [ -f package.json ]; then {_step('npm install')}; ddev npm install; fi")
 
     if o.get("launch"):
         s.append("ddev launch")
-    s.append(f"ok {_q('Proyecto listo: https://' + o['name'] + '.' + project_tld())}")
+    s.append(_ok(_("Project ready: {url}").format(url=f"https://{o['name']}.{project_tld()}")))
     return "\n".join(s) + "\n"
 
 
 def script_edit(approot, o, old_db):
-    s = [_HEADER, f"cd {_q(approot)}"]
+    s = [_header(), f"cd {_q(approot)}"]
     db_changed = o.get("db") and o["db"] != old_db
     opts = dict(o)
     if db_changed:
-        opts["db"] = None  # la base de datos se cambia con migrate-database
-    s.append(_paso("Guardando la nueva configuración"))
+        opts["db"] = None  # the database is changed with migrate-database
+    s.append(_step(_("Saving the new configuration")))
     s.append(f"ddev config {_config_flags(opts, include_name=False)}")
     if db_changed:
-        s.append(_paso(f"Migrando la base de datos a {o['db']}"))
+        s.append(_step(_("Migrating the database to {db}").format(db=o["db"])))
         s.append(f"ddev debug migrate-database {_q(o['db'])}")
-    s.append(_paso("Reiniciando"))
+    s.append(_step(_("Restarting")))
     s.append("ddev restart")
-    s.append("ok 'Configuración aplicada'")
+    s.append(_ok(_("Configuration applied")))
     return "\n".join(s) + "\n"
 
 
 def script_simple(approot, commands, done_msg):
-    s = [_HEADER]
+    s = [_header()]
     if approot:
         s.append(f"cd {_q(approot)}")
     for title, cmd in commands:
-        s.append(f"paso {_q(title)}")
+        s.append(_step(title))
         s.append(cmd)
-    s.append(f"ok {_q(done_msg)}")
+    s.append(_ok(done_msg))
     return "\n".join(s) + "\n"

@@ -1,4 +1,4 @@
-"""Panel DDEV: interfaz gráfica para gestionar proyectos DDEV."""
+"""Panel DDEV: a desktop app to manage DDEV projects."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 REPO_URL = "https://github.com/jaayala03/panel-ddev"

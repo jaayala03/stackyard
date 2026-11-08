@@ -1,28 +1,45 @@
-# Cambios
+# Changelog
 
-Todas las versiones publicadas de Panel DDEV. El formato sigue
-[Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones
-siguen [SemVer](https://semver.org/lang/es/).
+All published versions of Panel DDEV. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
+[SemVer](https://semver.org/).
+
+## [0.3.0] - 2026-11-07
+
+### Added
+- **Tray icon**: open sites, start, stop and restart projects, stop all, and
+  "Open at login" (starts hidden in the tray). Closing the window keeps the app
+  running in the tray; "Quit" exits.
+- **Preferences** (menu ☰): interface language **English or Spanish** (or the
+  system language) and **light, dark or system** theme. The embedded terminal
+  follows the theme.
+- `README.es.md` and `TERMS.md` (English terms; Spanish in `TERMINOS.md`).
+
+### Changed
+- Source code, comments and the default UI language are now English; Spanish
+  is provided as a translation.
+- The installer is now `install.sh` (was `instalar.sh`) and speaks the system
+  language.
+- The header bar "About" button moved into a menu with Preferences and Quit.
 
 ## [0.2.0] - 2026-11-07
 
-### Añadido
-- Pestaña **Git** en cada proyecto: cambios con casillas para prepararlos,
-  diferencias con colores, historial de commits, commit (Ctrl+Enter), cambiar y
-  crear ramas, fetch, pull y push. Si el proyecto no usa git, permite inicializarlo.
-- Paquete **.deb** e instalador `instalar.sh`, que deja Docker, DDEV, mkcert y la
-  app listos en un solo paso.
-- Ventana **Acerca de** con versión, licencia y términos.
-- Licencia MIT y términos de uso.
+### Added
+- **Git** tab per project: changes with checkboxes to stage them, coloured
+  diffs, commit history, commit (Ctrl+Enter), switch and create branches,
+  fetch, pull and push. Projects without git can be initialized.
+- `.deb` package and installer that sets up Docker, DDEV, mkcert and the app.
+- **About** window with version, license and terms.
+- MIT license and terms of use.
 
 ## [0.1.0] - 2026-11-07
 
-### Añadido
-- Lista de proyectos DDEV con su estado, iniciar, detener, reiniciar y apagar todo.
-- Crear proyectos nuevos (PHP, Laravel, WordPress, Symfony, Drupal…) eligiendo
-  PHP, Node, Apache/nginx y base de datos.
-- Clonar repositorios con git, configurar e instalar dependencias.
-- Cambiar la configuración de un proyecto (incluye migrar MariaDB ↔ MySQL).
-- Herramientas: terminal en el contenedor, logs, phpMyAdmin, Mailpit,
-  importar/exportar base de datos, composer y npm install.
-- Terminal integrada donde se ve cada acción.
+### Added
+- DDEV project list with status; start, stop, restart and stop all.
+- New projects (PHP, Laravel, WordPress, Symfony, Drupal…) choosing PHP, Node,
+  Apache/nginx and database.
+- Clone repositories with git, configure and install dependencies.
+- Change a project's settings (including MariaDB ↔ MySQL migration).
+- Tools: container shell, logs, phpMyAdmin, Mailpit, database import/export,
+  composer and npm install.
+- Embedded terminal showing every action.
